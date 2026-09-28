@@ -30,5 +30,5 @@ Open daarna http://<ip-van-je-server>:2020 op je telefoon en kies "Zet op begins
 - Vanuit de lijst kan het ook snel: ⋯ bij een product → kies categorie of maak direct een nieuwe.
 
 ## Versies
-Elke release krijgt een eigen image, bijv. `ghcr.io/richrdj/boodschappenlijst:1.2.0`.
+Elke release krijgt een eigen image, bijv. `ghcr.io/richrdj/boodschappenlijst:1.2.1`.
 `latest` is altijd de nieuwste versie. Wil je niet automatisch meegaan, zet dan een vast versienummer in `stack.yml`.

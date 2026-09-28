@@ -101,6 +101,8 @@ button:focus-visible{outline:3px solid var(--route);outline-offset:2px}
 .btn{flex:none;border:0;border-radius:12px;background:var(--route);color:#fff;padding:0 16px;font-weight:700}
 .filter{width:100%;margin-bottom:10px}
 .note{color:var(--muted);font-size:15px;padding:14px}
+.ver{text-align:center;color:var(--muted);font-size:13px;margin:8px 0 0;opacity:.8}
+.ver a{color:inherit}
 
 /* Sheet */
 dialog{border:0;border-radius:18px 18px 0 0;padding:20px 16px calc(16px + env(safe-area-inset-bottom,0px));
@@ -174,7 +176,7 @@ dialog p{margin:0 0 14px;color:var(--muted);font-size:15px}
 const $ = s => document.querySelector(s);
 const PALETTE = ["#3E8E41","#7BB33A","#C8423B","#4A90D9","#C98A2E","#1FA3A3","#8A7FA8","#D4537E","#E07B24","#5B6BD6","#2E8B6E","#9C6B3F"];
 let cats = [], items = [], learned = [], current = null, view = "list", filter = "";
-let sugs = [], shownSugs = [], hl = -1, hist = [];
+let sugs = [], shownSugs = [], hl = -1, hist = [], appVersion = "";
 
 async function api(path, opts = {}) {
   const res = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
@@ -258,7 +260,10 @@ function renderSettings() {
         <select id="newLearnCat" aria-label="Categorie" style="flex:0 1 40%">${opts("overig")}</select>
       </div>
       <div class="addrow"><button class="btn" id="newLearnBtn" style="flex:1;padding:12px">Product onthouden</button></div>
-    </section>`;
+    </section>
+    <p class="ver">${appVersion ? (/^\d/.test(appVersion)
+      ? `<a href="https://github.com/RichrdJ/boodschappenlijst/releases/tag/v${esc(appVersion)}" target="_blank" rel="noopener">Versie ${esc(appVersion)}</a>`
+      : `Versie ${esc(appVersion)}`) : ""}</p>`;
 }
 
 /* ---------- historie ---------- */
@@ -482,6 +487,7 @@ $("#cancel").onclick = () => $("#sheet").close();
 
 (async () => {
   await load(); loadSuggestions();
+  api("/api/version").then(v => appVersion = v.version).catch(() => {});
   setInterval(() => { if (!document.hidden && !$("#sheet").open && view === "list") load(); }, 4000);
   document.addEventListener("visibilitychange", () => { if (!document.hidden && view === "list") load(); });
 })();

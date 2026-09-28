@@ -4,6 +4,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY app.py categories.py ./
 COPY static ./static
+ARG APP_VERSION=dev
+ENV APP_VERSION=$APP_VERSION
 ENV DB_PATH=/data/boodschappen.db
 VOLUME /data
 EXPOSE 8080

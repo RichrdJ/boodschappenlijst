@@ -187,6 +187,11 @@ def delete_suggestion(name):
     return suggestions()
 
 
+@app.get("/api/version")
+def version():
+    return jsonify({"version": os.environ.get("APP_VERSION", "dev")})
+
+
 # ---------- historie ----------
 
 @app.get("/api/history")

@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0A4FA3">
+<title>Boodschappen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F3F5F7; --surface:#FFFFFF; --ink:#16212C; --muted:#6B7785; --line:#D5DCE3;
+  --route:#0A4FA3; --marker:#FFD23F; --danger:#A3261E; --danger-bg:#FCE8E6;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#0F161D;--surface:#18222C;--ink:#E8EDF2;--muted:#8D9AA8;--line:#2A3642;--route:#5B9BEA;--danger:#FFB4AC;--danger-bg:#3A1E1C}
+}
+*,*::before,*::after{box-sizing:inherit}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);
+  font:17px/1.4 "Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+  padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+body.settings{padding-bottom:calc(32px + env(safe-area-inset-bottom,0px))}
+button{font:inherit;color:inherit;cursor:pointer}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:20px 20px 8px;max-width:640px;margin:0 auto}
+h1{font-size:28px;margin:0;letter-spacing:-.01em}
+.head-r{display:flex;align-items:center;gap:12px}
+.count{color:var(--muted);font-size:15px}
+.gear{background:none;border:2px solid var(--line);border-radius:999px;padding:6px 14px;font-size:15px}
+main{max-width:640px;margin:0 auto;padding:4px 16px 0}
+
+.route{position:relative;padding-left:30px}
+.route::before{content:"";position:absolute;left:10px;top:14px;bottom:14px;width:4px;border-radius:2px;background:var(--route);opacity:.25}
+.stop{position:relative;margin-bottom:18px}
+.stop>h2{position:relative;font-size:15px;font-weight:700;margin:0 0 6px;padding-top:4px;color:var(--muted)}
+.stop>h2::before{content:"";position:absolute;left:-26px;top:6px;width:16px;height:16px;border-radius:50%;background:var(--cat);border:3px solid var(--bg)}
+.stop.done>h2::before{background:var(--line)}
+.list{list-style:none;margin:0;padding:0;background:var(--surface);border-radius:0 14px 14px 0;overflow:hidden;border-left:4px solid var(--cat)}
+.list li{display:flex;align-items:center;min-height:52px;border-top:1px solid var(--line)}
+.list li:first-child{border-top:0}
+.check{flex:1;display:flex;align-items:center;gap:14px;padding:12px 14px;background:none;border:0;text-align:left;min-width:0}
+.box{flex:none;width:24px;height:24px;border-radius:7px;border:2px solid var(--line);display:grid;place-items:center}
+li.checked .box{background:var(--cat);border-color:var(--cat)}
+li.checked .box::after{content:"";width:6px;height:11px;border:solid #fff;border-width:0 3px 3px 0;transform:translateY(-1px) rotate(45deg)}
+.name{overflow-wrap:anywhere}
+li.checked .name{text-decoration:line-through;color:var(--muted)}
+.more{flex:none;width:48px;height:52px;background:none;border:0;color:var(--muted);font-size:22px}
+.empty{text-align:center;color:var(--muted);padding:48px 16px}
+.empty strong{display:block;color:var(--ink);font-size:20px;margin-bottom:4px}
+.clear{display:block;margin:8px auto 0;background:none;border:2px solid var(--line);font-size:15px;padding:10px 18px;border-radius:999px}
+
+#form{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);
+  padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px))}
+body.settings #form{display:none}
+.bar{display:flex;gap:10px;max-width:640px;margin:0 auto}
+input,select{flex:1;min-width:0;font:inherit;padding:12px 14px;border-radius:12px;border:2px solid var(--line);background:var(--bg);color:var(--ink)}
+input:focus,select:focus{outline:none;border-color:var(--route)}
+.add{flex:none;width:54px;border:0;border-radius:12px;background:var(--marker);color:#16212C;font-size:28px;font-weight:700}
+button:focus-visible{outline:3px solid var(--route);outline-offset:2px}
+
+/* Instellingen */
+.sec{margin-bottom:28px}
+.sec h2{font-size:20px;margin:0 0 4px}
+.sec>p{margin:0 0 12px;color:var(--muted);font-size:15px}
+.rows{list-style:none;margin:0;padding:0;background:var(--surface);border-radius:14px;overflow:hidden}
+.rows li{display:flex;align-items:center;gap:8px;padding:8px 10px;border-top:1px solid var(--line)}
+.rows li:first-child{border-top:0}
+.sw{flex:none;width:34px;height:34px;padding:0;border-radius:50%;border:3px solid var(--surface);background:var(--cat);outline:2px solid var(--line)}
+.rows input,.rows select{padding:9px 10px}
+.ic{flex:none;width:38px;height:38px;border-radius:10px;border:0;background:var(--bg);font-size:18px}
+.ic:disabled{opacity:.3;cursor:default}
+.ic.x{color:var(--danger)}
+.lname{flex:1;min-width:0;overflow-wrap:anywhere}
+.addrow{display:flex;gap:8px;margin-top:10px}
+.btn{flex:none;border:0;border-radius:12px;background:var(--route);color:#fff;padding:0 16px;font-weight:700}
+.filter{width:100%;margin-bottom:10px}
+.note{color:var(--muted);font-size:15px;padding:14px}
+
+/* Sheet */
+dialog{border:0;border-radius:18px 18px 0 0;padding:20px 16px calc(16px + env(safe-area-inset-bottom,0px));
+  width:100%;max-width:640px;margin:auto auto 0;background:var(--surface);color:var(--ink)}
+dialog::backdrop{background:rgba(10,20,30,.45)}
+dialog h3{margin:0 0 4px;font-size:20px}
+dialog p{margin:0 0 14px;color:var(--muted);font-size:15px}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.opt{display:flex;align-items:center;gap:10px;padding:12px;border-radius:12px;border:2px solid var(--line);background:none;text-align:left}
+.opt i{flex:none;width:12px;height:12px;border-radius:50%;background:var(--cat)}
+.opt.on{border-color:var(--cat)}
+.row{display:flex;gap:8px;margin-top:14px}
+.row button{flex:1;padding:12px;border-radius:12px;border:0}
+.del{background:var(--danger-bg);color:var(--danger)}
+.cancel{background:var(--bg)}
+.toast{position:fixed;left:50%;bottom:calc(100px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
+  background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:15px;max-width:90vw;
+  opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">Boodschappen</h1>
+  <div class="head-r">
+    <span class="count" id="count"></span>
+    <button class="gear" id="gear">Aanpassen</button>
+  </div>
+</header>
+<main id="main"></main>
+
+<form id="form" autocomplete="off">
+  <div class="bar">
+    <input id="input" list="sugg" placeholder="Wat moet je halen?" aria-label="Product toevoegen" enterkeyhint="done">
+    <button class="add" aria-label="Toevoegen">+</button>
+  </div>
+  <datalist id="sugg"></datalist>
+</form>
+
+<dialog id="sheet">
+  <h3 id="sheetTitle"></h3>
+  <p>Kies waar dit ligt. Volgende keer komt het meteen op die plek.</p>
+  <div class="opts" id="opts"></div>
+  <div class="addrow">
+    <input id="newCatSheet" placeholder="Nieuwe categorie, bijv. Diepvries" aria-label="Nieuwe categorie">
+    <button class="btn" id="newCatSheetBtn">Maak</button>
+  </div>
+  <div class="row">
+    <button class="del" id="del">Van lijst halen</button>
+    <button class="cancel" id="cancel">Sluiten</button>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const PALETTE = ["#3E8E41","#7BB33A","#C8423B","#4A90D9","#C98A2E","#1FA3A3","#8A7FA8","#D4537E","#E07B24","#5B6BD6","#2E8B6E","#9C6B3F"];
+let cats = [], items = [], learned = [], current = null, view = "list", filter = "";
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) { toast(data.error || "Opslaan lukte niet. Probeer het opnieuw."); throw new Error(data.error); }
+  return data;
+}
+const esc = s => { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; };
+const catOf = key => cats.find(c => c.key === key) || cats[cats.length - 1];
+let toastT;
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 2600); }
+
+/* ---------- lijst ---------- */
+function renderList() {
+  const open = items.filter(i => !i.checked).length;
+  $("#count").textContent = items.length ? `${open} van ${items.length}` : "";
+  if (!items.length) {
+    $("#main").innerHTML = `<div class="empty"><strong>Je lijst is leeg</strong>Typ hieronder wat je nodig hebt. Het komt vanzelf in de juiste volgorde te staan.</div>`;
+    return;
+  }
+  let html = '<div class="route">';
+  for (const c of cats) {
+    const group = items.filter(i => i.category === c.key);
+    if (!group.length) continue;
+    html += `<section class="stop${group.every(i => i.checked) ? " done" : ""}" style="--cat:${c.color}"><h2>${esc(c.label)}</h2><ul class="list">`;
+    for (const i of group) html += `<li class="${i.checked ? "checked" : ""}">
+        <button class="check" data-toggle="${i.id}" aria-pressed="${!!i.checked}"><span class="box"></span><span class="name">${esc(i.name)}</span></button>
+        <button class="more" data-more="${i.id}" aria-label="Categorie wijzigen voor ${esc(i.name)}">⋯</button></li>`;
+    html += "</ul></section>";
+  }
+  html += "</div>";
+  if (items.some(i => i.checked)) html += `<button class="clear" id="clear">Afgevinkte producten wissen</button>`;
+  $("#main").innerHTML = html;
+}
+
+/* ---------- aanpassen ---------- */
+function renderSettings() {
+  $("#count").textContent = "";
+  const catRows = cats.map((c, i) => {
+    const fixed = c.key === "overig";
+    return `<li style="--cat:${c.color}">
+      <button class="sw" data-color="${i}" aria-label="Andere kleur voor ${esc(c.label)}"></button>
+      <input value="${esc(c.label)}" data-label="${i}" aria-label="Naam van categorie">
+      <button class="ic" data-up="${i}" ${i === 0 ? "disabled" : ""} aria-label="Eerder in de route">↑</button>
+      <button class="ic" data-down="${i}" ${i === cats.length - 1 ? "disabled" : ""} aria-label="Later in de route">↓</button>
+      <button class="ic x" data-delcat="${i}" ${fixed ? "disabled" : ""} aria-label="Categorie verwijderen">✕</button></li>`;
+  }).join("");
+  const opts = sel => cats.map(c => `<option value="${c.key}"${c.key === sel ? " selected" : ""}>${esc(c.label)}</option>`).join("");
+  const shown = learned.filter(l => l.name.includes(filter.toLowerCase()));
+  const learnedRows = shown.length ? shown.map(l => `<li style="--cat:${catOf(l.category).color}">
+      <span class="lname">${esc(l.name)}</span>
+      <select data-learn="${esc(l.name)}" aria-label="Categorie voor ${esc(l.name)}" style="flex:0 1 46%">${opts(l.category)}</select>
+      <button class="ic x" data-forget="${esc(l.name)}" aria-label="${esc(l.name)} vergeten">✕</button></li>`).join("")
+    : `<li class="note">${learned.length ? "Geen product gevonden met die naam." : "Nog niets onthouden. Verplaats een product via ⋯ op je lijst, of voeg er hieronder een toe."}</li>`;
+
+  $("#main").innerHTML = `
+    <section class="sec">
+      <h2>Looproute</h2>
+      <p>Zet de categorieën in de volgorde waarin je door de winkel loopt. Tik op het bolletje voor een andere kleur.</p>
+      <ul class="rows">${catRows}</ul>
+      <div class="addrow"><input id="newCat" placeholder="Bijv. Diepvries" aria-label="Nieuwe categorie"><button class="btn" id="newCatBtn">Toevoegen</button></div>
+    </section>
+    <section class="sec">
+      <h2>Onthouden producten</h2>
+      <p>Hier staan producten die je zelf een plek hebt gegeven. Die keuze gaat altijd voor de automatische indeling.</p>
+      <input class="filter" id="filter" placeholder="Zoek product" value="${esc(filter)}" aria-label="Zoek in onthouden producten">
+      <ul class="rows">${learnedRows}</ul>
+      <div class="addrow">
+        <input id="newLearn" placeholder="Product, bijv. hummus" aria-label="Productnaam">
+        <select id="newLearnCat" aria-label="Categorie" style="flex:0 1 40%">${opts("overig")}</select>
+      </div>
+      <div class="addrow"><button class="btn" id="newLearnBtn" style="flex:1;padding:12px">Product onthouden</button></div>
+    </section>`;
+}
+
+function render() { view === "list" ? renderList() : renderSettings(); }
+
+async function saveCats() { cats = await api("/api/categories", { method: "PUT", body: JSON.stringify(cats) }); render(); }
+
+/* ---------- data ---------- */
+async function load() {
+  try { [cats, items] = await Promise.all([api("/api/categories"), api("/api/items")]); if (view === "list") render(); } catch (e) {}
+}
+async function loadSuggestions() {
+  try { $("#sugg").innerHTML = (await api("/api/suggestions")).map(n => `<option value="${esc(n)}">`).join(""); } catch (e) {}
+}
+
+/* ---------- events ---------- */
+$("#gear").onclick = async () => {
+  view = view === "list" ? "settings" : "list";
+  document.body.classList.toggle("settings", view === "settings");
+  $("#gear").textContent = view === "list" ? "Aanpassen" : "Klaar";
+  $("#title").textContent = view === "list" ? "Boodschappen" : "Aanpassen";
+  if (view === "settings") learned = await api("/api/learned");
+  else items = await api("/api/items");
+  render(); window.scrollTo(0, 0);
+};
+
+$("#form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const name = $("#input").value.trim();
+  if (!name) return;
+  $("#input").value = "";
+  items = await api("/api/items", { method: "POST", body: JSON.stringify({ name }) });
+  const added = items[items.map(i => i.name).lastIndexOf(name)];
+  if (added) toast(`${name} staat bij ${catOf(added.category).label}`);
+  render(); loadSuggestions();
+});
+
+$("#main").addEventListener("click", async e => {
+  const d = e.target.closest("button")?.dataset || {};
+  if (d.toggle) {
+    const it = items.find(i => i.id == d.toggle);
+    it.checked = it.checked ? 0 : 1; render();
+    items = await api(`/api/items/${it.id}`, { method: "PATCH", body: JSON.stringify({ checked: !!it.checked }) }); render();
+  } else if (d.more) {
+    current = items.find(i => i.id == d.more); openSheet();
+  } else if (e.target.id === "clear") {
+    items = await api("/api/clear-checked", { method: "POST" }); render();
+  } else if (d.up || d.down) {
+    const i = +(d.up ?? d.down), j = d.up ? i - 1 : i + 1;
+    [cats[i], cats[j]] = [cats[j], cats[i]]; await saveCats();
+    document.querySelector(`[data-${d.up ? "up" : "down"}="${j}"]`)?.focus();
+  } else if (d.color) {
+    const c = cats[+d.color]; c.color = PALETTE[(PALETTE.indexOf(c.color) + 1) % PALETTE.length]; await saveCats();
+  } else if (d.delcat) {
+    const c = cats[+d.delcat];
+    if (!confirm(`${c.label} verwijderen? Producten in deze categorie gaan naar Overig.`)) return;
+    cats.splice(+d.delcat, 1); await saveCats(); learned = await api("/api/learned"); render(); toast(`${c.label} verwijderd`);
+  } else if (d.forget) {
+    learned = await api(`/api/learned/${encodeURIComponent(d.forget)}`, { method: "DELETE" }); render(); toast(`${d.forget} vergeten`);
+  } else if (e.target.id === "newCatBtn") {
+    const label = $("#newCat").value.trim(); if (!label) return toast("Geef de categorie een naam");
+    cats = await api("/api/categories", { method: "POST", body: JSON.stringify({ label }) }); render(); toast(`${label} toegevoegd`);
+  } else if (e.target.id === "newLearnBtn") {
+    const name = $("#newLearn").value.trim(); if (!name) return toast("Vul een productnaam in");
+    learned = await api("/api/learned", { method: "PUT", body: JSON.stringify({ name, category: $("#newLearnCat").value }) });
+    render(); toast(`${name} onthouden`);
+  }
+});
+
+$("#main").addEventListener("change", async e => {
+  const d = e.target.dataset;
+  if (d.label !== undefined) { cats[+d.label].label = e.target.value; await saveCats(); toast("Naam opgeslagen"); }
+  if (d.learn) {
+    learned = await api("/api/learned", { method: "PUT", body: JSON.stringify({ name: d.learn, category: e.target.value }) });
+    render(); toast(`${d.learn} staat nu bij ${catOf(e.target.value).label}`);
+  }
+});
+$("#main").addEventListener("input", e => {
+  if (e.target.id === "filter") { filter = e.target.value; const pos = e.target.selectionStart; render(); const f = $("#filter"); f.focus(); f.setSelectionRange(pos, pos); }
+});
+$("#main").addEventListener("keydown", e => {
+  if (e.key !== "Enter") return;
+  if (e.target.id === "newCat") $("#newCatBtn").click();
+  if (e.target.id === "newLearn") $("#newLearnBtn").click();
+});
+
+/* ---------- sheet ---------- */
+function openSheet() {
+  $("#sheetTitle").textContent = current.name;
+  $("#opts").innerHTML = cats.map(c => `<button class="opt${c.key === current.category ? " on" : ""}" data-cat="${c.key}" style="--cat:${c.color}"><i></i>${esc(c.label)}</button>`).join("");
+  $("#newCatSheet").value = "";
+  if (!$("#sheet").open) $("#sheet").showModal();
+}
+async function moveTo(key) {
+  items = await api(`/api/items/${current.id}`, { method: "PATCH", body: JSON.stringify({ category: key }) });
+  $("#sheet").close(); render(); toast(`Onthouden: ${current.name} hoort bij ${catOf(key).label}`);
+}
+$("#opts").addEventListener("click", e => { const b = e.target.closest("[data-cat]"); if (b) moveTo(b.dataset.cat); });
+$("#newCatSheetBtn").onclick = async () => {
+  const label = $("#newCatSheet").value.trim(); if (!label) return toast("Geef de categorie een naam");
+  const before = new Set(cats.map(c => c.key));
+  cats = await api("/api/categories", { method: "POST", body: JSON.stringify({ label }) });
+  await moveTo(cats.find(c => !before.has(c.key)).key);
+};
+$("#newCatSheet").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); $("#newCatSheetBtn").click(); } });
+$("#del").onclick = async () => { items = await api(`/api/items/${current.id}`, { method: "DELETE" }); $("#sheet").close(); render(); };
+$("#cancel").onclick = () => $("#sheet").close();
+
+(async () => {
+  await load(); loadSuggestions();
+  setInterval(() => { if (!document.hidden && !$("#sheet").open && view === "list") load(); }, 4000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && view === "list") load(); });
+})();
+</script>
+</body>
+</html>

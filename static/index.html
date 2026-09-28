@@ -18,6 +18,9 @@
 }
 *,*::before,*::after{box-sizing:inherit}
 html,body{margin:0}
+/* geen dubbeltik-zoom op iOS bij snel afvinken; knijpen om te zoomen blijft werken */
+html,button,input,select,a{touch-action:manipulation}
+button{-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);color:var(--ink);
   font:17px/1.4 "Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
   padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}

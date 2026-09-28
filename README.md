@@ -4,7 +4,7 @@ Sorteert automatisch op looproute: Kruiden → Groente & fruit → Vlees & vis �
 
 ## Starten
     docker compose up -d --build
-Open daarna http://<ip-van-je-server>:8080 op je telefoon en kies "Zet op beginscherm".
+Open daarna http://<ip-van-je-server>:2020 op je telefoon en kies "Zet op beginscherm".
 
 ## Gebruik
 - Typ een product en druk op +. Hoeveelheden mogen ("2 kg aardappelen").

@@ -131,6 +131,17 @@ dialog p{margin:0 0 14px;color:var(--muted);font-size:15px}
 .toast .timer{position:absolute;left:0;bottom:0;height:3px;background:var(--marker);width:100%;transform-origin:left}
 .toast.counting .timer{animation:countdown var(--dur) linear forwards}
 @keyframes countdown{to{transform:scaleX(0)}}
+.undo{flex-direction:column;align-items:stretch;gap:0;padding:0}
+.undo-main{display:flex;align-items:center;gap:12px;min-height:52px;padding:6px 6px 6px 16px}
+.undo-sum{flex:1;min-width:0;display:flex;align-items:center;gap:8px;background:none;border:0;color:inherit!important;font-weight:400!important;text-align:left;padding:8px 0!important}
+.undo-sum span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.undo-sum .chev{flex:none;font-size:13px;opacity:.7;transition:transform .15s}
+.undo.open .chev{transform:rotate(180deg)}
+.undo-list{list-style:none;margin:0;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.12);max-height:40vh;overflow-y:auto}
+.undo-list li{display:flex;align-items:center;gap:12px;padding:0 6px 0 16px;min-height:44px}
+.undo-list li span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.undo:not(.open) .undo-list{display:none}
+.undo.open .timer{display:none}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}.toast .timer{display:none}}
 </style>
 </head>
@@ -171,6 +182,14 @@ dialog p{margin:0 0 14px;color:var(--muted);font-size:15px}
 </dialog>
 
 <div class="toast" id="toast" role="status"><span id="toastMsg"></span><button id="toastBtn" hidden></button><span class="timer" id="toastTimer" hidden></span></div>
+<div class="toast undo" id="undo" role="status">
+  <ul class="undo-list" id="undoList" aria-label="Net afgevinkt"></ul>
+  <div class="undo-main">
+    <button class="undo-sum" id="undoSum" aria-expanded="false"><span id="undoMsg"></span><i class="chev" id="undoChev" aria-hidden="true">▲</i></button>
+    <button id="undoAll"></button>
+  </div>
+  <span class="timer"></span>
+</div>
 
 <script>
 const $ = s => document.querySelector(s);
@@ -187,6 +206,49 @@ async function api(path, opts = {}) {
 const esc = s => { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; };
 const catOf = key => cats.find(c => c.key === key) || cats[cats.length - 1];
 let toastT;
+/* ---------- ongedaan maken: één balk voor alles wat je net hebt afgevinkt ---------- */
+let pending = [], undoT, undoOpen = false;
+const UNDO_MS = 6000;
+function undoBottom() {
+  const form = $("#form"), formH = getComputedStyle(form).display === "none" ? 0 : form.offsetHeight;
+  return formH ? `${formH + 10}px` : "";
+}
+function renderUndo() {
+  const u = $("#undo");
+  if (!pending.length) { u.classList.remove("show", "counting", "open"); undoOpen = false; return; }
+  const one = pending.length === 1;
+  $("#undoMsg").textContent = one ? `${pending[0].name} afgevinkt` : `${pending.length} producten afgevinkt`;
+  $("#undoChev").hidden = one;
+  $("#undoSum").disabled = one;
+  $("#undoSum").setAttribute("aria-expanded", undoOpen);
+  $("#undoAll").textContent = one ? "Ongedaan maken" : "Alles terug";
+  $("#undoList").innerHTML = pending.map((p, i) => `<li><span>${esc(p.name)}</span><button data-undo="${i}" aria-label="${esc(p.name)} terugzetten">Terug</button></li>`).join("");
+  u.classList.toggle("open", undoOpen && !one);
+  u.style.bottom = undoBottom();
+  u.classList.add("show");
+}
+function restartUndoTimer() {
+  const u = $("#undo");
+  clearTimeout(undoT);
+  u.classList.remove("counting"); void u.offsetWidth;
+  u.style.setProperty("--dur", UNDO_MS + "ms");
+  if (undoOpen) return; // uitgeklapt: blijft staan tot je hem weer inklapt
+  u.classList.add("counting");
+  undoT = setTimeout(() => { pending = []; renderUndo(); }, UNDO_MS);
+}
+function addPending(name, pid) {
+  pending.push({ name, pid });
+  renderUndo(); restartUndoTimer();
+}
+async function undoMany(list) {
+  for (const p of list) items = await api(`/api/history/${p.pid}/undo`, { method: "POST" });
+  pending = pending.filter(p => !list.includes(p));
+  render(); renderUndo(); if (pending.length) restartUndoTimer();
+}
+$("#undoSum").onclick = () => { if (pending.length < 2) return; undoOpen = !undoOpen; renderUndo(); restartUndoTimer(); };
+$("#undoAll").onclick = () => { clearTimeout(undoT); undoOpen = false; undoMany([...pending]); };
+$("#undoList").addEventListener("click", e => { const b = e.target.closest("[data-undo]"); if (b) undoMany([pending[+b.dataset.undo]]); });
+
 function toast(msg, action) {
   const t = $("#toast"), b = $("#toastBtn"), timer = $("#toastTimer"), ms = action ? 5000 : 2600;
   $("#toastMsg").textContent = msg;
@@ -194,7 +256,8 @@ function toast(msg, action) {
   if (action) { b.textContent = action.label; b.onclick = () => { t.classList.remove("show"); action.run(); }; }
   // net boven het invoerveld (en de suggesties) zweven, niet midden in de lijst
   const form = $("#form"), formH = getComputedStyle(form).display === "none" ? 0 : form.offsetHeight;
-  t.style.bottom = formH ? `${formH + 10}px` : "";
+  const u = $("#undo"), undoH = u.classList.contains("show") ? u.offsetHeight + 8 : 0;
+  t.style.bottom = formH || undoH ? `${formH + 10 + undoH}px` : "";
   t.classList.remove("counting"); void t.offsetWidth;
   t.style.setProperty("--dur", ms + "ms");
   t.classList.add("show"); if (action) t.classList.add("counting");
@@ -391,7 +454,7 @@ async function setView(v) {
   if (v === "settings") learned = await api("/api/learned");
   if (v === "history") hist = await api("/api/history");
   if (v === "list") items = await api("/api/items");
-  render(); window.scrollTo(0, 0);
+  render(); renderUndo(); window.scrollTo(0, 0);
 }
 document.querySelectorAll(".tab").forEach(t => t.onclick = () => setView(t.dataset.view));
 
@@ -413,9 +476,7 @@ $("#main").addEventListener("click", async e => {
     const req = api(`/api/items/${it.id}`, { method: "PATCH", body: JSON.stringify({ checked: true }) });
     await new Promise(r => setTimeout(r, 450));
     const r = await req; items = r.items; render();
-    toast(`${it.name} afgevinkt`, { label: "Ongedaan maken", run: async () => {
-      items = await api(`/api/history/${r.purchase_id}/undo`, { method: "POST" }); render();
-    }});
+    addPending(it.name, r.purchase_id);
   } else if (d.more) {
     current = items.find(i => i.id == d.more); openSheet();
   } else if (d.readd) {

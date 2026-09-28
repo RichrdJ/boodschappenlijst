@@ -13,6 +13,7 @@ Open daarna http://<ip-van-je-server>:2020 op je telefoon en kies "Zet op begins
 
 ## Gebruik
 - Typ een product en druk op +. Hoeveelheden mogen ("2 kg aardappelen").
+- Eerder getypte producten verschijnen als suggesties boven het invoerveld. Tik erop om ze meteen toe te voegen. Met een leeg veld zie je wat je vaak koopt. Met ✕ haal je een suggestie weg (handig bij typfouten).
 - Tik op een product om af te vinken.
 - Staat iets verkeerd? Tik op ⋯ en kies de juiste categorie. Dat wordt onthouden.
 - Meerdere telefoons blijven vanzelf in sync.
@@ -26,3 +27,7 @@ Open daarna http://<ip-van-je-server>:2020 op je telefoon en kies "Zet op begins
 - **Looproute**: zet categorieën met ↑ ↓ in je eigen volgorde, hernoem ze, geef ze een kleur, voeg nieuwe toe (bijv. Diepvries) of verwijder ze.
 - **Onthouden producten**: zie welke producten je zelf een plek hebt gegeven, verander de categorie, vergeet ze, of leer vooraf een nieuw product aan.
 - Vanuit de lijst kan het ook snel: ⋯ bij een product → kies categorie of maak direct een nieuwe.
+
+## Versies
+Elke release krijgt een eigen image, bijv. `ghcr.io/richrdj/boodschappenlijst:1.1.0`.
+`latest` is altijd de nieuwste versie. Wil je niet automatisch meegaan, zet dan een vast versienummer in `stack.yml`.

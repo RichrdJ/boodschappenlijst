@@ -20,7 +20,7 @@
 html,body{margin:0}
 body{background:var(--bg);color:var(--ink);
   font:17px/1.4 "Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
-  padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+  padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 body.settings{padding-bottom:calc(32px + env(safe-area-inset-bottom,0px))}
 button{font:inherit;color:inherit;cursor:pointer}
 header{display:flex;align-items:center;justify-content:space-between;gap:12px;
@@ -57,6 +57,17 @@ body.settings #form{display:none}
 .bar{display:flex;gap:10px;max-width:640px;margin:0 auto}
 input,select{flex:1;min-width:0;font:inherit;padding:12px 14px;border-radius:12px;border:2px solid var(--line);background:var(--bg);color:var(--ink)}
 input:focus,select:focus{outline:none;border-color:var(--route)}
+.sugs{display:flex;gap:8px;overflow-x:auto;max-width:640px;margin:0 auto;padding:0 0 10px;scrollbar-width:none}
+.sugs:empty{display:none}
+.sugs::-webkit-scrollbar{display:none}
+.chip{flex:none;display:flex;align-items:center;border-radius:999px;border:2px solid var(--line);background:var(--bg);max-width:70vw}
+.chip.hl{border-color:var(--route)}
+.chip.on-list{opacity:.55}
+.chip-add{display:flex;align-items:center;gap:8px;background:none;border:0;padding:8px 4px 8px 12px;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip-add i{flex:none;width:10px;height:10px;border-radius:50%;background:var(--cat)}
+.chip-add b{font-weight:700}
+.chip-x{background:none;border:0;color:var(--muted);padding:8px 12px 8px 6px;font-size:14px}
+.sug-label{flex:none;align-self:center;color:var(--muted);font-size:14px;padding-right:2px}
 .add{flex:none;width:54px;border:0;border-radius:12px;background:var(--marker);color:#16212C;font-size:28px;font-weight:700}
 button:focus-visible{outline:3px solid var(--route);outline-offset:2px}
 
@@ -109,11 +120,11 @@ dialog p{margin:0 0 14px;color:var(--muted);font-size:15px}
 <main id="main"></main>
 
 <form id="form" autocomplete="off">
+  <div class="sugs" id="sugs" role="listbox" aria-label="Eerder getypt"></div>
   <div class="bar">
-    <input id="input" list="sugg" placeholder="Wat moet je halen?" aria-label="Product toevoegen" enterkeyhint="done">
+    <input id="input" placeholder="Wat moet je halen?" aria-label="Product toevoegen" enterkeyhint="done">
     <button class="add" aria-label="Toevoegen">+</button>
   </div>
-  <datalist id="sugg"></datalist>
 </form>
 
 <dialog id="sheet">
@@ -136,6 +147,7 @@ dialog p{margin:0 0 14px;color:var(--muted);font-size:15px}
 const $ = s => document.querySelector(s);
 const PALETTE = ["#3E8E41","#7BB33A","#C8423B","#4A90D9","#C98A2E","#1FA3A3","#8A7FA8","#D4537E","#E07B24","#5B6BD6","#2E8B6E","#9C6B3F"];
 let cats = [], items = [], learned = [], current = null, view = "list", filter = "";
+let sugs = [], shownSugs = [], hl = -1;
 
 async function api(path, opts = {}) {
   const res = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
@@ -220,8 +232,74 @@ async function load() {
   try { [cats, items] = await Promise.all([api("/api/categories"), api("/api/items")]); if (view === "list") render(); } catch (e) {}
 }
 async function loadSuggestions() {
-  try { $("#sugg").innerHTML = (await api("/api/suggestions")).map(n => `<option value="${esc(n)}">`).join(""); } catch (e) {}
+  try { sugs = await api("/api/suggestions"); renderSugs(); } catch (e) {}
 }
+
+/* ---------- herkenning: eerder getypte producten ---------- */
+const norm = s => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/^\s*\d+[.,]?\d*\s*(x|st|stuks|kg|g|gr|gram|l|liter|ml|pak|zak|bos)?\s+/, "").trim();
+const onList = name => items.some(i => !i.checked && norm(i.name) === norm(name));
+
+function matchScore(name, q) {
+  const n = norm(name);
+  if (n === q) return 100;
+  if (n.startsWith(q)) return 80;
+  if (n.split(/[\s-]+/).some(w => w.startsWith(q))) return 60;
+  if (n.includes(q)) return 30;
+  return 0;
+}
+
+function renderSugs() {
+  const raw = $("#input").value, q = norm(raw);
+  if (!q) {
+    // Leeg invoerveld: laat zien wat je vaak koopt en nog niet op de lijst staat
+    shownSugs = document.activeElement === $("#input") ? sugs.filter(s => !onList(s.name)).slice(0, 8) : [];
+  } else {
+    shownSugs = sugs.map(s => ({ ...s, score: matchScore(s.name, q) }))
+      .filter(s => s.score > 0 && !(s.score === 100 && raw.trim() === s.name))
+      .sort((a, b) => b.score - a.score || b.uses - a.uses).slice(0, 6);
+  }
+  hl = Math.min(hl, shownSugs.length - 1);
+  const label = !q && shownSugs.length ? '<span class="sug-label">Vaak gekocht</span>' : "";
+  $("#sugs").innerHTML = label + shownSugs.map((s, i) => {
+    const c = catOf(s.category), n = esc(s.name);
+    const t = raw.trim().toLowerCase(), idx = t ? s.name.toLowerCase().indexOf(t) : -1;
+    const shown = idx >= 0 ? esc(s.name.slice(0, idx)) + "<b>" + esc(s.name.slice(idx, idx + t.length)) + "</b>" + esc(s.name.slice(idx + t.length)) : n;
+    return `<span class="chip${i === hl ? " hl" : ""}${onList(s.name) ? " on-list" : ""}" role="option" aria-selected="${i === hl}">
+      <button type="button" class="chip-add" data-sug="${i}" style="--cat:${c.color}" aria-label="${n} toevoegen${onList(s.name) ? ", staat al op je lijst" : ""}"><i></i><span>${shown}</span></button>
+      <button type="button" class="chip-x" data-sugdel="${i}" aria-label="${n} niet meer voorstellen">✕</button></span>`;
+  }).join("");
+}
+
+async function addItem(name) {
+  if (onList(name)) { toast(`${name} staat al op je lijst`); return; }
+  items = await api("/api/items", { method: "POST", body: JSON.stringify({ name }) });
+  const added = items[items.map(i => i.name).lastIndexOf(name)];
+  if (added) toast(`${name} staat bij ${catOf(added.category).label}`);
+  render(); loadSuggestions();
+}
+
+$("#input").addEventListener("input", () => { hl = -1; renderSugs(); });
+$("#input").addEventListener("focus", renderSugs);
+$("#input").addEventListener("blur", () => setTimeout(() => { if (document.activeElement?.closest?.("#sugs")) return; if (!$("#input").value) { shownSugs = []; $("#sugs").innerHTML = ""; } }, 150));
+$("#input").addEventListener("keydown", e => {
+  if (!shownSugs.length) return;
+  if (e.key === "ArrowDown" || e.key === "ArrowRight" && hl >= 0) { e.preventDefault(); hl = (hl + 1) % shownSugs.length; renderSugs(); }
+  else if (e.key === "ArrowUp" || e.key === "ArrowLeft" && hl >= 0) { e.preventDefault(); hl = (hl - 1 + shownSugs.length) % shownSugs.length; renderSugs(); }
+  else if (e.key === "Tab" && $("#input").value) { e.preventDefault(); $("#input").value = shownSugs[Math.max(hl, 0)].name; hl = -1; renderSugs(); }
+  else if (e.key === "Escape") { hl = -1; $("#sugs").innerHTML = ""; shownSugs = []; }
+});
+$("#sugs").addEventListener("pointerdown", e => e.preventDefault()); // toetsenbord blijft open
+$("#sugs").addEventListener("click", async e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.sug !== undefined) {
+    const s = shownSugs[+b.dataset.sug]; $("#input").value = ""; hl = -1;
+    await addItem(s.name); $("#input").focus(); renderSugs();
+  } else if (b.dataset.sugdel !== undefined) {
+    const s = shownSugs[+b.dataset.sugdel];
+    sugs = await api(`/api/suggestions/${encodeURIComponent(s.name)}`, { method: "DELETE" });
+    renderSugs(); toast(`${s.name} wordt niet meer voorgesteld`);
+  }
+});
 
 /* ---------- events ---------- */
 $("#gear").onclick = async () => {
@@ -236,13 +314,10 @@ $("#gear").onclick = async () => {
 
 $("#form").addEventListener("submit", async e => {
   e.preventDefault();
-  const name = $("#input").value.trim();
+  const name = hl >= 0 && shownSugs[hl] ? shownSugs[hl].name : $("#input").value.trim();
   if (!name) return;
-  $("#input").value = "";
-  items = await api("/api/items", { method: "POST", body: JSON.stringify({ name }) });
-  const added = items[items.map(i => i.name).lastIndexOf(name)];
-  if (added) toast(`${name} staat bij ${catOf(added.category).label}`);
-  render(); loadSuggestions();
+  $("#input").value = ""; hl = -1;
+  await addItem(name); renderSugs();
 });
 
 $("#main").addEventListener("click", async e => {

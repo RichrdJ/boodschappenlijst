@@ -144,8 +144,30 @@ def clear_checked():
 
 @app.get("/api/suggestions")
 def suggestions():
-    rows = db().execute("SELECT name FROM history ORDER BY uses DESC LIMIT 200").fetchall()
-    return jsonify([r["name"] for r in rows])
+    """Eerder getypte producten, zonder dubbelen (hoofdletters tellen niet), vaakst gebruikt eerst."""
+    merged = {}
+    for r in db().execute("SELECT name, uses FROM history ORDER BY uses DESC").fetchall():
+        key = normalize(r["name"])
+        if not key:
+            continue
+        if key in merged:
+            merged[key]["uses"] += r["uses"]
+        else:
+            merged[key] = {"name": r["name"], "uses": r["uses"]}
+    result = sorted(merged.values(), key=lambda x: -x["uses"])[:500]
+    for x in result:
+        x["category"] = categorize(x["name"])
+    return jsonify(result)
+
+
+@app.delete("/api/suggestions/<path:name>")
+def delete_suggestion(name):
+    conn, key = db(), normalize(name)
+    for r in conn.execute("SELECT name FROM history").fetchall():
+        if normalize(r["name"]) == key:
+            conn.execute("DELETE FROM history WHERE name = ?", (r["name"],))
+    conn.commit()
+    return suggestions()
 
 
 # ---------- categorieën beheren ----------

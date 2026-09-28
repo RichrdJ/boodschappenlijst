@@ -28,7 +28,9 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;
 h1{font-size:28px;margin:0;letter-spacing:-.01em}
 .head-r{display:flex;align-items:center;gap:12px}
 .count{color:var(--muted);font-size:15px}
-.gear{background:none;border:2px solid var(--line);border-radius:999px;padding:6px 14px;font-size:15px}
+.tabs{display:flex;gap:4px;max-width:640px;margin:0 auto 12px;padding:4px;background:var(--line);border-radius:14px;width:calc(100% - 32px)}
+.tab{flex:1;border:0;background:none;padding:9px 6px;border-radius:10px;font-size:15px;color:var(--muted)}
+.tab[aria-selected="true"]{background:var(--surface);color:var(--ink);font-weight:700}
 main{max-width:640px;margin:0 auto;padding:4px 16px 0}
 
 .route{position:relative;padding-left:30px}
@@ -43,13 +45,21 @@ main{max-width:640px;margin:0 auto;padding:4px 16px 0}
 .check{flex:1;display:flex;align-items:center;gap:14px;padding:12px 14px;background:none;border:0;text-align:left;min-width:0}
 .box{flex:none;width:24px;height:24px;border-radius:7px;border:2px solid var(--line);display:grid;place-items:center}
 li.checked .box{background:var(--cat);border-color:var(--cat)}
+li.leaving{opacity:0;transition:opacity .3s .15s}
 li.checked .box::after{content:"";width:6px;height:11px;border:solid #fff;border-width:0 3px 3px 0;transform:translateY(-1px) rotate(45deg)}
 .name{overflow-wrap:anywhere}
 li.checked .name{text-decoration:line-through;color:var(--muted)}
 .more{flex:none;width:48px;height:52px;background:none;border:0;color:var(--muted);font-size:22px}
 .empty{text-align:center;color:var(--muted);padding:48px 16px}
 .empty strong{display:block;color:var(--ink);font-size:20px;margin-bottom:4px}
-.clear{display:block;margin:8px auto 0;background:none;border:2px solid var(--line);font-size:15px;padding:10px 18px;border-radius:999px}
+.day{margin-bottom:22px}
+.day-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:0 0 6px}
+.day-h h2{font-size:17px;margin:0}
+.day-h small{color:var(--muted);font-size:14px}
+.again{background:none;border:0;color:var(--route);font-size:15px;font-weight:700;padding:6px 0}
+.hrow .dot{flex:none;width:10px;height:10px;border-radius:50%;background:var(--cat)}
+.hrow .t{flex:none;color:var(--muted);font-size:14px;font-variant-numeric:tabular-nums}
+.hrow .ic.plus{color:var(--route);font-size:22px}
 
 #form{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);
   padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px))}
@@ -103,10 +113,13 @@ dialog p{margin:0 0 14px;color:var(--muted);font-size:15px}
 .row button{flex:1;padding:12px;border-radius:12px;border:0}
 .del{background:var(--danger-bg);color:var(--danger)}
 .cancel{background:var(--bg)}
-.toast{position:fixed;left:50%;bottom:calc(100px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
-  background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:15px;max-width:90vw;
+.toast{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
+  display:flex;align-items:center;gap:14px;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:15px;max-width:92vw;
   opacity:0;pointer-events:none;transition:opacity .2s}
-.toast.show{opacity:1}
+body.settings .toast{bottom:calc(24px + env(safe-area-inset-bottom,0px))}
+.toast.show{opacity:1;pointer-events:auto}
+.toast button{flex:none;background:none;border:0;color:var(--marker);font-weight:700;padding:4px 0}
+@media (prefers-color-scheme:dark){.toast button{color:#0A4FA3}}
 </style>
 </head>
 <body>
@@ -114,9 +127,13 @@ dialog p{margin:0 0 14px;color:var(--muted);font-size:15px}
   <h1 id="title">Boodschappen</h1>
   <div class="head-r">
     <span class="count" id="count"></span>
-    <button class="gear" id="gear">Aanpassen</button>
   </div>
 </header>
+<nav class="tabs" role="tablist">
+  <button class="tab" role="tab" data-view="list" aria-selected="true">Lijst</button>
+  <button class="tab" role="tab" data-view="history" aria-selected="false">Historie</button>
+  <button class="tab" role="tab" data-view="settings" aria-selected="false">Aanpassen</button>
+</nav>
 <main id="main"></main>
 
 <form id="form" autocomplete="off">
@@ -141,13 +158,13 @@ dialog p{margin:0 0 14px;color:var(--muted);font-size:15px}
   </div>
 </dialog>
 
-<div class="toast" id="toast" role="status"></div>
+<div class="toast" id="toast" role="status"><span id="toastMsg"></span><button id="toastBtn" hidden></button></div>
 
 <script>
 const $ = s => document.querySelector(s);
 const PALETTE = ["#3E8E41","#7BB33A","#C8423B","#4A90D9","#C98A2E","#1FA3A3","#8A7FA8","#D4537E","#E07B24","#5B6BD6","#2E8B6E","#9C6B3F"];
 let cats = [], items = [], learned = [], current = null, view = "list", filter = "";
-let sugs = [], shownSugs = [], hl = -1;
+let sugs = [], shownSugs = [], hl = -1, hist = [];
 
 async function api(path, opts = {}) {
   const res = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
@@ -158,28 +175,33 @@ async function api(path, opts = {}) {
 const esc = s => { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; };
 const catOf = key => cats.find(c => c.key === key) || cats[cats.length - 1];
 let toastT;
-function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 2600); }
+function toast(msg, action) {
+  const t = $("#toast"), b = $("#toastBtn");
+  $("#toastMsg").textContent = msg;
+  b.hidden = !action;
+  if (action) { b.textContent = action.label; b.onclick = () => { t.classList.remove("show"); action.run(); }; }
+  t.classList.add("show"); clearTimeout(toastT);
+  toastT = setTimeout(() => t.classList.remove("show"), action ? 5000 : 2600);
+}
 
 /* ---------- lijst ---------- */
 function renderList() {
-  const open = items.filter(i => !i.checked).length;
-  $("#count").textContent = items.length ? `${open} van ${items.length}` : "";
+  $("#count").textContent = items.length ? `${items.length} te halen` : "";
   if (!items.length) {
-    $("#main").innerHTML = `<div class="empty"><strong>Je lijst is leeg</strong>Typ hieronder wat je nodig hebt. Het komt vanzelf in de juiste volgorde te staan.</div>`;
+    $("#main").innerHTML = `<div class="empty"><strong>Je lijst is leeg</strong>Typ hieronder wat je nodig hebt. Het komt vanzelf in de juiste volgorde te staan. Wat je afvinkt, vind je terug onder Historie.</div>`;
     return;
   }
   let html = '<div class="route">';
   for (const c of cats) {
     const group = items.filter(i => i.category === c.key);
     if (!group.length) continue;
-    html += `<section class="stop${group.every(i => i.checked) ? " done" : ""}" style="--cat:${c.color}"><h2>${esc(c.label)}</h2><ul class="list">`;
-    for (const i of group) html += `<li class="${i.checked ? "checked" : ""}">
-        <button class="check" data-toggle="${i.id}" aria-pressed="${!!i.checked}"><span class="box"></span><span class="name">${esc(i.name)}</span></button>
+    html += `<section class="stop" style="--cat:${c.color}"><h2>${esc(c.label)}</h2><ul class="list">`;
+    for (const i of group) html += `<li data-li="${i.id}">
+        <button class="check" data-toggle="${i.id}" aria-label="${esc(i.name)} afvinken"><span class="box"></span><span class="name">${esc(i.name)}</span></button>
         <button class="more" data-more="${i.id}" aria-label="Categorie wijzigen voor ${esc(i.name)}">⋯</button></li>`;
     html += "</ul></section>";
   }
   html += "</div>";
-  if (items.some(i => i.checked)) html += `<button class="clear" id="clear">Afgevinkte producten wissen</button>`;
   $("#main").innerHTML = html;
 }
 
@@ -223,7 +245,46 @@ function renderSettings() {
     </section>`;
 }
 
-function render() { view === "list" ? renderList() : renderSettings(); }
+/* ---------- historie ---------- */
+const dayKey = ts => { const d = new Date(ts * 1000); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; };
+function dayLabel(ts) {
+  const d = new Date(ts * 1000), today = new Date(), y = new Date(); y.setDate(today.getDate() - 1);
+  if (dayKey(ts) === dayKey(today / 1000)) return "Vandaag";
+  if (dayKey(ts) === dayKey(y / 1000)) return "Gisteren";
+  return d.toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long", ...(d.getFullYear() !== today.getFullYear() && { year: "numeric" }) });
+}
+function renderHistory() {
+  $("#count").textContent = "";
+  if (!hist.length) {
+    $("#main").innerHTML = `<div class="empty"><strong>Nog geen historie</strong>Vink iets af op je lijst, dan zie je het hier terug per dag.</div>`;
+    return;
+  }
+  const days = [];
+  for (const p of hist) {
+    const k = dayKey(p.bought);
+    if (!days.length || days[days.length - 1].key !== k) days.push({ key: k, ts: p.bought, rows: [] });
+    days[days.length - 1].rows.push(p);
+  }
+  $("#main").innerHTML = days.map((d, di) => `<section class="day">
+    <div class="day-h"><div><h2>${dayLabel(d.ts)}</h2><small>${d.rows.length} ${d.rows.length === 1 ? "product" : "producten"}</small></div>
+      <button class="again" data-dayadd="${di}">Alles weer op de lijst</button></div>
+    <ul class="rows">${d.rows.map(p => `<li class="hrow" style="--cat:${catOf(p.category).color}">
+      <span class="dot" aria-hidden="true"></span>
+      <span class="lname">${esc(p.name)}</span>
+      <span class="t">${new Date(p.bought * 1000).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}</span>
+      <button class="ic plus" data-readd="${p.id}" aria-label="${esc(p.name)} weer op de lijst">+</button>
+      <button class="ic x" data-hdel="${p.id}" aria-label="${esc(p.name)} uit historie verwijderen">✕</button></li>`).join("")}</ul>
+  </section>`).join("");
+  window._days = days;
+}
+async function readd(names) {
+  const r = await api("/api/history/readd", { method: "POST", body: JSON.stringify({ names }) });
+  items = r.items;
+  if (!r.added) toast(names.length === 1 ? `${names[0]} staat al op je lijst` : "Alles staat al op je lijst");
+  else toast(names.length === 1 ? `${names[0]} staat weer op je lijst` : `${r.added} ${r.added === 1 ? "product" : "producten"} weer op je lijst`);
+}
+
+function render() { ({ list: renderList, history: renderHistory, settings: renderSettings })[view](); }
 
 async function saveCats() { cats = await api("/api/categories", { method: "PUT", body: JSON.stringify(cats) }); render(); }
 
@@ -237,7 +298,7 @@ async function loadSuggestions() {
 
 /* ---------- herkenning: eerder getypte producten ---------- */
 const norm = s => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/^\s*\d+[.,]?\d*\s*(x|st|stuks|kg|g|gr|gram|l|liter|ml|pak|zak|bos)?\s+/, "").trim();
-const onList = name => items.some(i => !i.checked && norm(i.name) === norm(name));
+const onList = name => items.some(i => norm(i.name) === norm(name));
 
 function matchScore(name, q) {
   const n = norm(name);
@@ -302,15 +363,16 @@ $("#sugs").addEventListener("click", async e => {
 });
 
 /* ---------- events ---------- */
-$("#gear").onclick = async () => {
-  view = view === "list" ? "settings" : "list";
-  document.body.classList.toggle("settings", view === "settings");
-  $("#gear").textContent = view === "list" ? "Aanpassen" : "Klaar";
-  $("#title").textContent = view === "list" ? "Boodschappen" : "Aanpassen";
-  if (view === "settings") learned = await api("/api/learned");
-  else items = await api("/api/items");
+async function setView(v) {
+  view = v;
+  document.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-selected", t.dataset.view === v));
+  document.body.classList.toggle("settings", v !== "list");
+  if (v === "settings") learned = await api("/api/learned");
+  if (v === "history") hist = await api("/api/history");
+  if (v === "list") items = await api("/api/items");
   render(); window.scrollTo(0, 0);
-};
+}
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => setView(t.dataset.view));
 
 $("#form").addEventListener("submit", async e => {
   e.preventDefault();
@@ -324,12 +386,23 @@ $("#main").addEventListener("click", async e => {
   const d = e.target.closest("button")?.dataset || {};
   if (d.toggle) {
     const it = items.find(i => i.id == d.toggle);
-    it.checked = it.checked ? 0 : 1; render();
-    items = await api(`/api/items/${it.id}`, { method: "PATCH", body: JSON.stringify({ checked: !!it.checked }) }); render();
+    const li = document.querySelector(`[data-li="${it.id}"]`);
+    if (!it || li.classList.contains("leaving")) return;
+    li.classList.add("checked", "leaving");
+    const req = api(`/api/items/${it.id}`, { method: "PATCH", body: JSON.stringify({ checked: true }) });
+    await new Promise(r => setTimeout(r, 450));
+    const r = await req; items = r.items; render();
+    toast(`${it.name} afgevinkt`, { label: "Ongedaan maken", run: async () => {
+      items = await api(`/api/history/${r.purchase_id}/undo`, { method: "POST" }); render();
+    }});
   } else if (d.more) {
     current = items.find(i => i.id == d.more); openSheet();
-  } else if (e.target.id === "clear") {
-    items = await api("/api/clear-checked", { method: "POST" }); render();
+  } else if (d.readd) {
+    await readd([hist.find(p => p.id == d.readd).name]);
+  } else if (d.dayadd) {
+    await readd([...new Set(window._days[+d.dayadd].rows.map(p => p.name))]);
+  } else if (d.hdel) {
+    hist = await api(`/api/history/${d.hdel}`, { method: "DELETE" }); render();
   } else if (d.up || d.down) {
     const i = +(d.up ?? d.down), j = d.up ? i - 1 : i + 1;
     [cats[i], cats[j]] = [cats[j], cats[i]]; await saveCats();

@@ -46,6 +46,13 @@ def init_db():
             name TEXT PRIMARY KEY,
             uses INTEGER NOT NULL DEFAULT 1
         );
+        -- afgevinkte producten: verdwijnen van de lijst en komen in de historie
+        CREATE TABLE IF NOT EXISTS purchases (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            category TEXT NOT NULL,
+            bought REAL NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS categories (
             key TEXT PRIMARY KEY,
             label TEXT NOT NULL,
@@ -56,6 +63,9 @@ def init_db():
     if conn.execute("SELECT COUNT(*) FROM categories").fetchone()[0] == 0:
         for i, (key, label, _) in enumerate(CATEGORIES):
             conn.execute("INSERT INTO categories VALUES (?, ?, ?, ?)", (key, label, PALETTE[i % len(PALETTE)], i))
+    # oude versies bewaarden afgevinkte producten op de lijst: verplaats die naar de historie
+    conn.execute("INSERT INTO purchases (name, category, bought) SELECT name, category, created FROM items WHERE checked = 1")
+    conn.execute("DELETE FROM items WHERE checked = 1")
     conn.commit()
     conn.close()
 
@@ -77,7 +87,7 @@ def categorize(name):
 
 def all_items():
     order = {k: i for i, k in enumerate(category_keys())}
-    items = [dict(r) for r in db().execute("SELECT * FROM items ORDER BY created").fetchall()]
+    items = [dict(r) for r in db().execute("SELECT * FROM items WHERE checked = 0 ORDER BY created").fetchall()]
     items.sort(key=lambda r: (order.get(r["category"], 99), r["created"]))
     return items
 
@@ -118,13 +128,20 @@ def update_item(item_id):
     conn = db()
     item = conn.execute("SELECT * FROM items WHERE id = ?", (item_id,)).fetchone()
     if not item:
-        return jsonify({"error": "Product niet gevonden"}), 404
-    if "checked" in data:
-        conn.execute("UPDATE items SET checked = ? WHERE id = ?", (1 if data["checked"] else 0, item_id))
+        return jsonify({"error": "Dit product staat niet meer op de lijst"}), 404
     if data.get("category") in category_keys():
         conn.execute("UPDATE items SET category = ? WHERE id = ?", (data["category"], item_id))
         remember(item["name"], data["category"])
+        item = conn.execute("SELECT * FROM items WHERE id = ?", (item_id,)).fetchone()
+    purchase_id = None
+    if data.get("checked"):
+        cur = conn.execute("INSERT INTO purchases (name, category, bought) VALUES (?, ?, ?)",
+                           (item["name"], item["category"], time.time()))
+        purchase_id = cur.lastrowid
+        conn.execute("DELETE FROM items WHERE id = ?", (item_id,))
     conn.commit()
+    if data.get("checked"):
+        return jsonify({"items": all_items(), "purchase_id": purchase_id})
     return jsonify(all_items())
 
 
@@ -168,6 +185,50 @@ def delete_suggestion(name):
             conn.execute("DELETE FROM history WHERE name = ?", (r["name"],))
     conn.commit()
     return suggestions()
+
+
+# ---------- historie ----------
+
+@app.get("/api/history")
+def history():
+    rows = db().execute("SELECT * FROM purchases ORDER BY bought DESC LIMIT 1000").fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.post("/api/history/<int:pid>/undo")
+def undo_purchase(pid):
+    """Afvinken ongedaan maken: terug op de lijst, weg uit de historie."""
+    conn = db()
+    p = conn.execute("SELECT * FROM purchases WHERE id = ?", (pid,)).fetchone()
+    if p:
+        conn.execute("INSERT INTO items (name, category, created) VALUES (?, ?, ?)", (p["name"], p["category"], time.time()))
+        conn.execute("DELETE FROM purchases WHERE id = ?", (pid,))
+        conn.commit()
+    return jsonify(all_items())
+
+
+@app.post("/api/history/readd")
+def readd():
+    """Producten uit de historie opnieuw op de lijst zetten (dubbelen worden overgeslagen)."""
+    names = (request.json or {}).get("names", [])
+    conn = db()
+    on_list = {normalize(r["name"]) for r in conn.execute("SELECT name FROM items WHERE checked = 0")}
+    added = 0
+    for name in names:
+        if normalize(name) in on_list:
+            continue
+        conn.execute("INSERT INTO items (name, category, created) VALUES (?, ?, ?)", (name, categorize(name), time.time()))
+        on_list.add(normalize(name))
+        added += 1
+    conn.commit()
+    return jsonify({"items": all_items(), "added": added})
+
+
+@app.delete("/api/history/<int:pid>")
+def delete_purchase(pid):
+    db().execute("DELETE FROM purchases WHERE id = ?", (pid,))
+    db().commit()
+    return history()
 
 
 # ---------- categorieën beheren ----------

@@ -2,7 +2,12 @@
 
 Sorteert automatisch op looproute: Kruiden → Groente & fruit → Vlees & vis → Zuivel → Brood → Drinken → Overig.
 
-## Starten
+## Starten als stack (Portainer of docker compose)
+Gebruik `stack.yml`: die haalt het kant-en-klare image op, bouwen is niet nodig.
+In Portainer: Stacks → Add stack → plak de inhoud van `stack.yml` → Deploy.
+Of op de server: `docker compose -f stack.yml up -d`
+
+## Zelf bouwen
     docker compose up -d --build
 Open daarna http://<ip-van-je-server>:2020 op je telefoon en kies "Zet op beginscherm".
 

@@ -1,0 +1,11 @@
+services:
+  boodschappen:
+    image: ghcr.io/richrdj/boodschappenlijst:latest
+    ports:
+      - "2020:8080"
+    volumes:
+      - boodschappen-data:/data
+    restart: unless-stopped
+
+volumes:
+  boodschappen-data:

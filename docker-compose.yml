@@ -6,7 +6,4 @@ services:
       - "2020:8080"
     volumes:
       - ./data:/data
-    env_file:
-      - path: .env
-        required: false
     restart: unless-stopped

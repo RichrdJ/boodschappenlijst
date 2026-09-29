@@ -2,8 +2,7 @@ FROM python:3.12-slim
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-COPY app.py auth.py categories.py ./
-COPY templates ./templates
+COPY app.py categories.py ./
 COPY static ./static
 ARG APP_VERSION=dev
 ENV APP_VERSION=$APP_VERSION

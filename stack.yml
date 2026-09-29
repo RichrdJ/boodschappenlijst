@@ -5,21 +5,6 @@ services:
       - "2020:8080"
     volumes:
       - boodschappen-data:/data
-    environment:
-      # Het adres waarop de app publiek bereikbaar is (altijd https)
-      PUBLIC_URL: https://boodschappen.example.nl
-      # Jouw e-mailadres: bij de eerste keer inloggen krijg je de lijst van vóór de accounts
-      OWNER_EMAIL: jij@gmail.com
-      # Inloggen met Google (zie README)
-      GOOGLE_CLIENT_ID: ""
-      GOOGLE_CLIENT_SECRET: ""
-      # Inloggen met Apple (optioneel, zie README)
-      APPLE_CLIENT_ID: ""
-      APPLE_TEAM_ID: ""
-      APPLE_KEY_ID: ""
-      APPLE_PRIVATE_KEY: ""
-      # Optioneel: alleen deze accounts toelaten, bijv. "jij@gmail.com,partner@icloud.com,@familie.nl"
-      ALLOWED_EMAILS: ""
     restart: unless-stopped
 
 volumes:

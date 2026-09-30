@@ -2,6 +2,24 @@
 
 Sorteert automatisch op looproute: Kruiden → Groente & fruit → Vlees & vis → Zuivel → Brood → Drinken → Overig.
 
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/list.png" width="240" alt="Lijst gesorteerd op looproute"><br><sub>Vanzelf in de volgorde van je looproute</sub></td>
+    <td align="center"><img src="docs/screenshots/sugs.png" width="240" alt="Suggesties tijdens het typen"><br><sub>Suggesties van eerder gekochte producten</sub></td>
+    <td align="center"><img src="docs/screenshots/sheet.png" width="240" alt="Categorie kiezen voor een product"><br><sub>Staat iets verkeerd? Kies de juiste plek</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/undo.png" width="240" alt="Afgevinkt, met ongedaan maken"><br><sub>Afvinken, en even kunnen terugzetten</sub></td>
+    <td align="center"><img src="docs/screenshots/history.png" width="240" alt="Historie per dag"><br><sub>Historie per dag, met één tik weer op de lijst</sub></td>
+    <td align="center"><img src="docs/screenshots/settings.png" width="240" alt="Looproute aanpassen"><br><sub>Je eigen looproute en kleuren</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/list-dark.png" width="240" alt="Lijst in donkere modus"><br><sub>Donkere modus volgt je telefoon</sub></td>
+    <td align="center"><img src="docs/screenshots/history-dark.png" width="240" alt="Historie in donkere modus"><br><sub>&nbsp;</sub></td>
+    <td></td>
+  </tr>
+</table>
+
 ## Starten als stack (Portainer of docker compose)
 Gebruik `stack.yml`: die haalt het kant-en-klare image op, bouwen is niet nodig.
 In Portainer: Stacks → Add stack → plak de inhoud van `stack.yml` → Deploy.

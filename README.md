@@ -4,18 +4,18 @@ Sorteert automatisch op looproute: Kruiden → Groente & fruit → Vlees & vis �
 
 <table>
   <tr>
-    <td align="center"><img src="docs/screenshots/list.png" width="240" alt="Lijst gesorteerd op looproute"><br><sub>Vanzelf in de volgorde van je looproute</sub></td>
-    <td align="center"><img src="docs/screenshots/sugs.png" width="240" alt="Suggesties tijdens het typen"><br><sub>Suggesties van eerder gekochte producten</sub></td>
-    <td align="center"><img src="docs/screenshots/sheet.png" width="240" alt="Categorie kiezen voor een product"><br><sub>Staat iets verkeerd? Kies de juiste plek</sub></td>
+    <td align="center"><img src="docs/screenshots/dark-list.png" width="240" alt="Lijst gesorteerd op looproute"><br><sub>Vanzelf in de volgorde van je looproute</sub></td>
+    <td align="center"><img src="docs/screenshots/dark-sugs.png" width="240" alt="Suggesties tijdens het typen"><br><sub>Suggesties van eerder gekochte producten</sub></td>
+    <td align="center"><img src="docs/screenshots/dark-sheet.png" width="240" alt="Categorie kiezen voor een product"><br><sub>Staat iets verkeerd? Kies de juiste plek</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/screenshots/undo.png" width="240" alt="Afgevinkt, met ongedaan maken"><br><sub>Afvinken, en even kunnen terugzetten</sub></td>
-    <td align="center"><img src="docs/screenshots/history.png" width="240" alt="Historie per dag"><br><sub>Historie per dag, met één tik weer op de lijst</sub></td>
-    <td align="center"><img src="docs/screenshots/settings.png" width="240" alt="Looproute aanpassen"><br><sub>Je eigen looproute en kleuren</sub></td>
+    <td align="center"><img src="docs/screenshots/dark-undo.png" width="240" alt="Afgevinkt, met ongedaan maken"><br><sub>Afvinken, en even kunnen terugzetten</sub></td>
+    <td align="center"><img src="docs/screenshots/dark-history.png" width="240" alt="Historie per dag"><br><sub>Historie per dag, met één tik weer op de lijst</sub></td>
+    <td align="center"><img src="docs/screenshots/dark-settings.png" width="240" alt="Looproute aanpassen"><br><sub>Je eigen looproute en kleuren</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/screenshots/list-light.png" width="240" alt="Lijst in lichte modus"><br><sub>Licht of donker, net als je telefoon</sub></td>
-    <td align="center"><img src="docs/screenshots/history-light.png" width="240" alt="Historie in lichte modus"><br><sub>&nbsp;</sub></td>
+    <td align="center"><img src="docs/screenshots/light-list.png" width="240" alt="Lijst in lichte modus"><br><sub>Licht of donker, net als je telefoon</sub></td>
+    <td align="center"><img src="docs/screenshots/light-history.png" width="240" alt="Historie in lichte modus"><br><sub>&nbsp;</sub></td>
     <td></td>
   </tr>
 </table>

@@ -14,8 +14,8 @@ Sorteert automatisch op looproute: Kruiden → Groente & fruit → Vlees & vis �
     <td align="center"><img src="docs/screenshots/settings.png" width="240" alt="Looproute aanpassen"><br><sub>Je eigen looproute en kleuren</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/screenshots/list-dark.png" width="240" alt="Lijst in donkere modus"><br><sub>Donkere modus volgt je telefoon</sub></td>
-    <td align="center"><img src="docs/screenshots/history-dark.png" width="240" alt="Historie in donkere modus"><br><sub>&nbsp;</sub></td>
+    <td align="center"><img src="docs/screenshots/list-light.png" width="240" alt="Lijst in lichte modus"><br><sub>Licht of donker, net als je telefoon</sub></td>
+    <td align="center"><img src="docs/screenshots/history-light.png" width="240" alt="Historie in lichte modus"><br><sub>&nbsp;</sub></td>
     <td></td>
   </tr>
 </table>

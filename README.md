@@ -32,14 +32,14 @@ Open daarna http://<ip-van-je-server>:2020 op je telefoon en kies "Zet op begins
 ## Gebruik
 - Typ een product en druk op +. Hoeveelheden mogen ("2 kg aardappelen").
 - Eerder getypte producten verschijnen als suggesties boven het invoerveld. Tik erop om ze meteen toe te voegen. Met een leeg veld zie je wat je vaak koopt. Met ✕ haal je een suggestie weg (handig bij typfouten).
-- **Productherkenning**: tikfouten worden verbeterd ("komkomer" wordt komkommer, "advokado" wordt avocado) en daarna in de juiste categorie gezet. Klopt de verbetering niet, tik dan op "Toch …" in de melding: de naam blijft zoals je hem typte en dat woord wordt voortaan niet meer verbeterd. Herkend wordt alles uit de trefwoorden in `categories.py` en de producten die je zelf een categorie hebt gegeven.
+- **Productherkenning**: tikfouten worden verbeterd ("komkomer" wordt komkommer, "advokado" wordt avocado) en daarna in de juiste categorie gezet. Klopt de verbetering niet, tik dan op "Toch …" in de melding: de naam blijft zoals je hem typte en dat woord wordt voortaan niet meer verbeterd. Herkend worden ruim 1.400 gangbare supermarktproducten (`categories.py` en `products.py`) plus alles wat je zelf een categorie hebt gegeven.
 - Tik op een product om af te vinken. Het verdwijnt van je lijst (even "Ongedaan maken" kan) en komt in de Historie.
 - **Historie**: alles wat je hebt afgevinkt, per dag. Zet losse producten of een hele dag in één keer weer op je lijst.
 - Staat iets verkeerd? Tik op ⋯ en kies de juiste categorie. Dat wordt onthouden.
 - Meerdere telefoons blijven vanzelf in sync.
 
 ## Aanpassen
-- Volgorde of trefwoorden: `categories.py` (daarna `docker compose up -d --build`).
+- Volgorde of trefwoorden: `categories.py`, de uitgebreide productenlijst staat in `products.py` (daarna `docker compose up -d --build`).
 - Nieuwe categorie: voeg hem toe in `categories.py` en geef hem een kleur in `static/index.html` (`--c-<sleutel>`).
 - Data staat in `./data/boodschappen.db`.
 

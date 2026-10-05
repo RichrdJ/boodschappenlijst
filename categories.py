@@ -57,6 +57,12 @@ CATEGORIES = [
     ]),
 ]
 
+# uitgebreide productenlijst erbij (products.py); trefwoorden hierboven gaan voor
+from products import extra_keywords  # noqa: E402
+
+_base = {kw for _key, _label, kws in CATEGORIES for kw in kws}
+CATEGORIES = [(key, label, kws + extra_keywords(key, _base)) for key, label, kws in CATEGORIES]
+
 CATEGORY_KEYS = [c[0] for c in CATEGORIES]
 DEFAULT_CATEGORY = "overig"
 

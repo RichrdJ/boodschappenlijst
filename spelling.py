@@ -80,12 +80,14 @@ def _correct_word(w: str, vocab: set, sounds: dict, max_limit: int = 2) -> str |
         s_stem = _sound(stem)
         best, best_d, tie = None, limit + 1, False
         for k in vocab:
-            # korte woorden: eerste letter moet kloppen ('rood' is geen 'brood')
-            if len(stem) <= 5 and k[0] != stem[0]:
+            # korte woorden: eerste klank moet kloppen ('rood' is geen 'brood', 'salm' wel 'zalm')
+            if len(stem) <= 5 and sounds[k][:1] != s_stem[:1]:
                 continue
             d = _dist(stem, k, limit)
-            if len(stem) >= 6:  # 'klinkt als' alleen bij langere woorden ('mayo' is geen 'mais')
+            if len(stem) >= 6:
                 d = min(d, _dist(s_stem, sounds[k], limit))
+            elif s_stem == sounds[k]:  # kort woord: alleen als het precies hetzelfde klinkt
+                d = min(d, 1)       # ('salm' -> 'zalm', maar 'mayo' is geen 'mais')
             if d < best_d:
                 best, best_d, tie = k, d, False
             elif d == best_d and k != best:
@@ -114,7 +116,7 @@ def correct(name: str, vocab: set) -> str:
         if _is_known(w, vocab):
             # lijkt een samenstelling ('tomatenpuree'); alleen een duidelijk bijna-identiek
             # lang woord verbeteren ('sinasappel' -> 'sinaasappel', 'bloemkol' -> 'bloemkool')
-            if len(w) < 8:
+            if len(w) < 7:
                 return orig
             new = _correct_word(w, vocab, sounds, max_limit=1)
         else:

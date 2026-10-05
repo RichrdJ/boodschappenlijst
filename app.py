@@ -28,9 +28,56 @@ def close_db(_):
         conn.close()
 
 
+MULTI_LIST_TABLES = ("items", "learned", "history", "purchases", "categories")
+
+
+def _columns(conn, table):
+    return {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
+
+
+def _undo_accounts_schema(conn):
+    """De (teruggedraaide) versie met accounts gaf elke tabel een verplichte kolom list_id.
+    Daarmee mislukt elke INSERT van deze versie. Zet die tabellen terug naar één lijst,
+    met behoud van alle gegevens. Er wordt eerst een reservekopie gemaakt."""
+    if "list_id" not in _columns(conn, "items"):
+        return False
+    backup = sqlite3.connect(f"{DB_PATH}.backup-{time.strftime('%Y%m%d-%H%M%S')}")
+    conn.backup(backup)
+    backup.close()
+    for t in MULTI_LIST_TABLES:
+        if conn.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", (t,)).fetchone():
+            conn.execute(f"DROP TABLE IF EXISTS {t}_old")
+            conn.execute(f"ALTER TABLE {t} RENAME TO {t}_old")
+    return True
+
+
+def _copy_back(conn):
+    """Gegevens uit de *_old-tabellen in de nieuwe tabellen zetten (meerdere lijsten worden samengevoegd)."""
+    have = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+    if "items_old" in have:
+        chk = "checked" if "checked" in _columns(conn, "items_old") else "0"
+        conn.execute(f"INSERT INTO items (id, name, category, checked, created) "
+                     f"SELECT id, name, category, {chk}, created FROM items_old")
+    if "learned_old" in have:
+        conn.execute("INSERT OR IGNORE INTO learned (name, category) "
+                     "SELECT name, category FROM learned_old ORDER BY list_id")
+    if "history_old" in have:
+        conn.execute("INSERT INTO history (name, uses) SELECT name, SUM(uses) FROM history_old GROUP BY name")
+    if "purchases_old" in have:
+        conn.execute("INSERT INTO purchases (id, name, category, bought) "
+                     "SELECT id, name, category, bought FROM purchases_old")
+    if "categories_old" in have:
+        conn.execute("INSERT OR IGNORE INTO categories (key, label, color, position) "
+                     "SELECT key, label, color, position FROM categories_old ORDER BY list_id, position")
+    for t in MULTI_LIST_TABLES:
+        conn.execute(f"DROP TABLE IF EXISTS {t}_old")
+    conn.execute("PRAGMA user_version = 0")
+
+
 def init_db():
     os.makedirs(os.path.dirname(os.path.abspath(DB_PATH)), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
+    restored = _undo_accounts_schema(conn)
     conn.executescript("""
         CREATE TABLE IF NOT EXISTS items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -65,6 +112,8 @@ def init_db():
             position INTEGER NOT NULL
         );
     """)
+    if restored:
+        _copy_back(conn)
     # oudere databases hebben de kolom 'checked' nog niet: CREATE TABLE IF NOT EXISTS
     # past bestaande tabellen niet aan, dus voeg de kolom hier zelf toe
     cols = {r[1] for r in conn.execute("PRAGMA table_info(items)")}

@@ -6,4 +6,7 @@ services:
       - "2020:8080"
     volumes:
       - ./data:/data
+    environment:
+      # wachtwoord voor de app; laat leeg of haal weg om zonder inloggen te werken
+      - APP_PASSWORD=
     restart: unless-stopped

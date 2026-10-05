@@ -1,14 +1,27 @@
+import hashlib
+import hmac
 import os
 import re
+import secrets
 import sqlite3
+import threading
 import time
-from flask import Flask, jsonify, request, g, send_from_directory
+from datetime import timedelta
+from flask import Flask, jsonify, redirect, request, g, send_from_directory, session
 
 from categories import CATEGORIES, DEFAULT_CATEGORY, guess_category, normalize
 from spelling import correct
 
 DB_PATH = os.environ.get("DB_PATH", "boodschappen.db")
+APP_PASSWORD = os.environ.get("APP_PASSWORD", "")
 app = Flask(__name__, static_folder="static")
+app.config.update(
+    PERMANENT_SESSION_LIFETIME=timedelta(days=365),  # één keer inloggen per apparaat
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=os.environ.get("COOKIE_SECURE", "").lower() in ("1", "true", "yes"),
+    SESSION_COOKIE_NAME="boodschappen_sessie",
+)
 
 PALETTE = ["#3E8E41", "#7BB33A", "#C8423B", "#4A90D9", "#C98A2E", "#1FA3A3", "#8A7FA8",
            "#D4537E", "#E07B24", "#5B6BD6", "#2E8B6E", "#9C6B3F"]
@@ -105,6 +118,10 @@ def init_db():
         CREATE TABLE IF NOT EXISTS known_words (
             word TEXT PRIMARY KEY
         );
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS categories (
             key TEXT PRIMARY KEY,
             label TEXT NOT NULL,
@@ -125,8 +142,97 @@ def init_db():
     # oude versies bewaarden afgevinkte producten op de lijst: verplaats die naar de historie
     conn.execute("INSERT INTO purchases (name, category, bought) SELECT name, category, created FROM items WHERE checked = 1")
     conn.execute("DELETE FROM items WHERE checked = 1")
+    # sleutel voor het ondertekenen van de inlogcookie: één keer aanmaken en bewaren
+    row = conn.execute("SELECT value FROM settings WHERE key = 'secret_key'").fetchone()
+    if not row:
+        conn.execute("INSERT INTO settings VALUES ('secret_key', ?)", (secrets.token_hex(32),))
+        row = conn.execute("SELECT value FROM settings WHERE key = 'secret_key'").fetchone()
+    app.secret_key = row[0]
     conn.commit()
     conn.close()
+
+
+# ---------- inloggen (alleen actief als APP_PASSWORD is gezet) ----------
+
+PUBLIC_PATHS = {"/login", "/api/login"}
+_fails, _fails_lock = {}, threading.Lock()   # per adres: [aantal mislukt, geblokkeerd tot]
+_global_fails = []                            # tijdstippen van recente mislukte pogingen
+
+
+def _password_tag():
+    """Verandert als het wachtwoord verandert, zodat oude sessies dan vanzelf ongeldig worden."""
+    return hmac.new(app.secret_key.encode(), APP_PASSWORD.encode(), hashlib.sha256).hexdigest()[:24]
+
+
+def _client():
+    fwd = request.headers.get("X-Forwarded-For", "")
+    return (fwd.split(",")[0].strip() or request.remote_addr or "?")
+
+
+def _locked_for(ip):
+    now = time.time()
+    with _fails_lock:
+        _global_fails[:] = [t for t in _global_fails if now - t < 900]
+        until = _fails.get(ip, [0, 0])[1]
+        if len(_global_fails) >= 50:  # veel pogingen van overal: iedereen even afremmen
+            until = max(until, _global_fails[-1] + 60)
+    return max(0, int(until - now))
+
+
+def _register_fail(ip):
+    now = time.time()
+    with _fails_lock:
+        count, _ = _fails.get(ip, [0, 0])
+        count += 1
+        # na 5 fouten: 30 s wachten, daarna steeds twee keer zo lang (max 15 min)
+        wait = 0 if count < 5 else min(30 * 2 ** (count - 5), 900)
+        _fails[ip] = [count, now + wait]
+        _global_fails.append(now)
+
+
+@app.before_request
+def require_login():
+    if not APP_PASSWORD or request.path in PUBLIC_PATHS:
+        return None
+    if hmac.compare_digest(session.get("auth", ""), _password_tag()):
+        return None
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "Je bent niet (meer) ingelogd", "login": True}), 401
+    return redirect("/login")
+
+
+@app.get("/login")
+def login_page():
+    if not APP_PASSWORD:
+        return redirect("/")
+    return send_from_directory(app.static_folder, "login.html")
+
+
+@app.post("/api/login")
+def login():
+    if not APP_PASSWORD:
+        return jsonify({"ok": True})
+    ip = _client()
+    wait = _locked_for(ip)
+    if wait:
+        return jsonify({"error": f"Te vaak een verkeerd wachtwoord. Probeer het over {wait} seconden opnieuw."}), 429
+    given = (request.json or {}).get("password", "")
+    if not hmac.compare_digest(given.encode(), APP_PASSWORD.encode()):
+        _register_fail(ip)
+        time.sleep(0.5)
+        return jsonify({"error": "Dat wachtwoord klopt niet."}), 401
+    with _fails_lock:
+        _fails.pop(ip, None)
+    session.clear()
+    session.permanent = True
+    session["auth"] = _password_tag()
+    return jsonify({"ok": True})
+
+
+@app.post("/api/logout")
+def logout():
+    session.clear()
+    return jsonify({"ok": True})
 
 
 def get_categories():
@@ -288,7 +394,7 @@ def delete_suggestion(name):
 
 @app.get("/api/version")
 def version():
-    return jsonify({"version": os.environ.get("APP_VERSION", "dev")})
+    return jsonify({"version": os.environ.get("APP_VERSION", "dev"), "auth": bool(APP_PASSWORD)})
 
 
 # ---------- historie ----------

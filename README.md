@@ -48,6 +48,14 @@ Open daarna http://<ip-van-je-server>:2020 op je telefoon en kies "Zet op begins
 - **Onthouden producten**: zie welke producten je zelf een plek hebt gegeven, verander de categorie, vergeet ze, of leer vooraf een nieuw product aan.
 - Vanuit de lijst kan het ook snel: ⋯ bij een product → kies categorie of maak direct een nieuwe.
 
+## Inloggen
+Zet een wachtwoord met de omgevingsvariabele `APP_PASSWORD` (in `stack.yml` of `docker-compose.yml`) en start de container opnieuw. Iedereen deelt dat wachtwoord en dezelfde lijst.
+- Elk apparaat logt één keer in en blijft een jaar ingelogd. Uitloggen kan onderaan **Aanpassen**.
+- Wachtwoord veranderd? Dan moeten alle apparaten opnieuw inloggen.
+- Na 5 verkeerde pogingen moet je even wachten, en steeds langer bij nieuwe fouten.
+- Draait de app via https (bijv. achter een reverse proxy), zet dan ook `COOKIE_SECURE=true`.
+- Zonder `APP_PASSWORD` werkt alles zoals vroeger, zonder inloggen.
+
 ## Versies
 Elke release krijgt een eigen image, bijv. `ghcr.io/richrdj/boodschappenlijst:1.3.0`.
 `latest` is altijd de nieuwste versie. Wil je niet automatisch meegaan, zet dan een vast versienummer in `stack.yml`.

@@ -103,6 +103,7 @@ button:focus-visible{outline:3px solid var(--route);outline-offset:2px}
 .note{color:var(--muted);font-size:15px;padding:14px}
 .ver{text-align:center;color:var(--muted);font-size:13px;margin:8px 0 0;opacity:.8}
 .ver a{color:inherit}
+.linkbtn{background:none;border:0;padding:10px 12px;color:inherit;text-decoration:underline;font-size:inherit}
 
 /* Sheet */
 dialog{border:0;border-radius:18px 18px 0 0;padding:20px 16px calc(16px + env(safe-area-inset-bottom,0px));
@@ -195,11 +196,12 @@ dialog p{margin:0 0 14px;color:var(--muted);font-size:15px}
 const $ = s => document.querySelector(s);
 const PALETTE = ["#3E8E41","#7BB33A","#C8423B","#4A90D9","#C98A2E","#1FA3A3","#8A7FA8","#D4537E","#E07B24","#5B6BD6","#2E8B6E","#9C6B3F"];
 let cats = [], items = [], learned = [], current = null, view = "list", filter = "";
-let sugs = [], shownSugs = [], hl = -1, hist = [], appVersion = "";
+let sugs = [], shownSugs = [], hl = -1, hist = [], appVersion = "", appAuth = false;
 
 async function api(path, opts = {}) {
   const res = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
   const data = await res.json().catch(() => ({}));
+  if (res.status === 401 && data.login) { location.replace("/login"); throw new Error("niet ingelogd"); }
   if (!res.ok) { toast(data.error || "Opslaan lukte niet. Probeer het opnieuw."); throw new Error(data.error); }
   return data;
 }
@@ -326,7 +328,8 @@ function renderSettings() {
     </section>
     <p class="ver">${appVersion ? (/^\d/.test(appVersion)
       ? `<a href="https://github.com/RichrdJ/boodschappenlijst/releases/tag/v${esc(appVersion)}" target="_blank" rel="noopener">Versie ${esc(appVersion)}</a>`
-      : `Versie ${esc(appVersion)}`) : ""}</p>`;
+      : `Versie ${esc(appVersion)}`) : ""}</p>
+    ${appAuth ? `<p class="ver"><button class="linkbtn" id="logout">Uitloggen op dit apparaat</button></p>` : ""}`;
 }
 
 /* ---------- historie ---------- */
@@ -553,10 +556,15 @@ $("#newCatSheetBtn").onclick = async () => {
 $("#newCatSheet").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); $("#newCatSheetBtn").click(); } });
 $("#del").onclick = async () => { items = await api(`/api/items/${current.id}`, { method: "DELETE" }); $("#sheet").close(); render(); };
 $("#cancel").onclick = () => $("#sheet").close();
+document.addEventListener("click", async e => {
+  if (e.target.id !== "logout") return;
+  await fetch("/api/logout", { method: "POST" }).catch(() => {});
+  location.replace("/login");
+});
 
 (async () => {
   await load(); loadSuggestions();
-  api("/api/version").then(v => appVersion = v.version).catch(() => {});
+  api("/api/version").then(v => { appVersion = v.version; appAuth = !!v.auth; }).catch(() => {});
   setInterval(() => { if (!document.hidden && !$("#sheet").open && view === "list") load(); }, 4000);
   document.addEventListener("visibilitychange", () => { if (!document.hidden && view === "list") load(); });
 })();

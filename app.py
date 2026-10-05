@@ -60,6 +60,11 @@ def init_db():
             position INTEGER NOT NULL
         );
     """)
+    # oudere databases hebben de kolom 'checked' nog niet: CREATE TABLE IF NOT EXISTS
+    # past bestaande tabellen niet aan, dus voeg de kolom hier zelf toe
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(items)")}
+    if "checked" not in cols:
+        conn.execute("ALTER TABLE items ADD COLUMN checked INTEGER NOT NULL DEFAULT 0")
     if conn.execute("SELECT COUNT(*) FROM categories").fetchone()[0] == 0:
         for i, (key, label, _) in enumerate(CATEGORIES):
             conn.execute("INSERT INTO categories VALUES (?, ?, ?, ?)", (key, label, PALETTE[i % len(PALETTE)], i))

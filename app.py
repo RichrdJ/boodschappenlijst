@@ -5,6 +5,7 @@ import time
 from flask import Flask, jsonify, request, g, send_from_directory
 
 from categories import CATEGORIES, DEFAULT_CATEGORY, guess_category, normalize
+from spelling import correct
 
 DB_PATH = os.environ.get("DB_PATH", "boodschappen.db")
 app = Flask(__name__, static_folder="static")
@@ -53,6 +54,10 @@ def init_db():
             category TEXT NOT NULL,
             bought REAL NOT NULL
         );
+        -- woorden die je bewust zo wilt houden (niet automatisch verbeteren)
+        CREATE TABLE IF NOT EXISTS known_words (
+            word TEXT PRIMARY KEY
+        );
         CREATE TABLE IF NOT EXISTS categories (
             key TEXT PRIMARY KEY,
             label TEXT NOT NULL,
@@ -97,6 +102,30 @@ def all_items():
     return items
 
 
+def vocabulary():
+    """Bekende woorden voor productherkenning: trefwoorden, zelf ingedeelde producten en
+    woorden die je bewust hebt behouden."""
+    words = {kw for _key, _label, kws in CATEGORIES for kw in kws}
+    for (name,) in db().execute("SELECT name FROM learned"):
+        words.update(name.split())
+    words.update(r[0] for r in db().execute("SELECT word FROM known_words"))
+    return words
+
+
+def on_list(name):
+    key = normalize(name)
+    return any(normalize(r["name"]) == key for r in db().execute("SELECT name FROM items WHERE checked = 0"))
+
+
+def bump_history(name, delta):
+    conn = db()
+    if delta > 0:
+        conn.execute("INSERT INTO history (name) VALUES (?) ON CONFLICT(name) DO UPDATE SET uses = uses + 1", (name,))
+    else:
+        conn.execute("UPDATE history SET uses = uses - 1 WHERE name = ?", (name,))
+        conn.execute("DELETE FROM history WHERE name = ? AND uses <= 0", (name,))
+
+
 def remember(name, category):
     db().execute("INSERT INTO learned (name, category) VALUES (?, ?) "
                  "ON CONFLICT(name) DO UPDATE SET category = excluded.category", (normalize(name), category))
@@ -119,12 +148,16 @@ def add_item():
     name = (request.json or {}).get("name", "").strip()
     if not name:
         return jsonify({"error": "Geen naam opgegeven"}), 400
+    fixed = correct(name, vocabulary())
+    if fixed != name and on_list(fixed):
+        return jsonify({"items": all_items(), "duplicate": fixed})
     conn = db()
-    conn.execute("INSERT INTO items (name, category, created) VALUES (?, ?, ?)",
-                 (name, categorize(name), time.time()))
-    conn.execute("INSERT INTO history (name) VALUES (?) ON CONFLICT(name) DO UPDATE SET uses = uses + 1", (name,))
+    cur = conn.execute("INSERT INTO items (name, category, created) VALUES (?, ?, ?)",
+                       (fixed, categorize(fixed), time.time()))
+    bump_history(fixed, +1)
     conn.commit()
-    return jsonify(all_items()), 201
+    return jsonify({"items": all_items(), "id": cur.lastrowid,
+                    "corrected": {"from": name, "to": fixed} if fixed != name else None}), 201
 
 
 @app.patch("/api/items/<int:item_id>")
@@ -134,6 +167,18 @@ def update_item(item_id):
     item = conn.execute("SELECT * FROM items WHERE id = ?", (item_id,)).fetchone()
     if not item:
         return jsonify({"error": "Dit product staat niet meer op de lijst"}), 404
+    new_name = (data.get("name") or "").strip()
+    if new_name and new_name != item["name"]:
+        # verbetering terugdraaien: oorspronkelijke naam houden en die woorden voortaan met rust laten
+        conn.execute("UPDATE items SET name = ?, category = ? WHERE id = ?", (new_name, categorize(new_name), item_id))
+        if data.get("keep"):
+            known = vocabulary()
+            for w in re.findall(r"[a-zà-ÿ'-]+", new_name.lower()):
+                if w not in known:
+                    conn.execute("INSERT OR IGNORE INTO known_words (word) VALUES (?)", (w,))
+        bump_history(item["name"], -1)
+        bump_history(new_name, +1)
+        item = conn.execute("SELECT * FROM items WHERE id = ?", (item_id,)).fetchone()
     if data.get("category") in category_keys():
         conn.execute("UPDATE items SET category = ? WHERE id = ?", (data["category"], item_id))
         remember(item["name"], data["category"])

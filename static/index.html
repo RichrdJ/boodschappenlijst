@@ -417,9 +417,17 @@ function renderSugs() {
 
 async function addItem(name) {
   if (onList(name)) { toast(`${name} staat al op je lijst`); return; }
-  items = await api("/api/items", { method: "POST", body: JSON.stringify({ name }) });
-  const added = items[items.map(i => i.name).lastIndexOf(name)];
-  if (added) toast(`${name} staat bij ${catOf(added.category).label}`);
+  const r = await api("/api/items", { method: "POST", body: JSON.stringify({ name }) });
+  items = Array.isArray(r) ? r : r.items;
+  if (r.duplicate) { toast(`${r.duplicate} staat al op je lijst`); render(); return; }
+  const fix = r.corrected, added = items.find(i => i.id === r.id) || items[items.map(i => i.name).lastIndexOf(name)];
+  if (added && fix) {
+    // productherkenning heeft een tikfout verbeterd: laat zien wat het werd, met een weg terug
+    toast(`Verbeterd: ${fix.to} (${catOf(added.category).label})`, { label: `Toch “${fix.from}”`, run: async () => {
+      items = await api(`/api/items/${added.id}`, { method: "PATCH", body: JSON.stringify({ name: fix.from, keep: true }) });
+      render(); loadSuggestions(); toast(`${fix.from} blijft zo, wordt niet meer verbeterd`);
+    } });
+  } else if (added) toast(`${added.name} staat bij ${catOf(added.category).label}`);
   render(); loadSuggestions();
 }
 

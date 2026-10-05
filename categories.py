@@ -46,13 +46,13 @@ CATEGORIES = [
         "water", "spa", "bruiswater", "cola", "fanta", "sprite", "frisdrank", "sap",
         "jus", "jus d'orange", "limonade", "siroop", "ranja", "ice tea", "icetea", "bier",
         "wijn", "rosé", "prosecco", "koffie", "thee", "energiedrank", "tonic", "cassis",
-        "chocomel", "smoothie",
+        "chocomel", "chocomelk", "smoothie",
     ]),
     ("overig", "Overig", [
         "saus", "pasta", "spaghetti", "rijst", "noedels", "soep", "chips", "koek", "koekjes",
         "chocolade", "snoep", "wc-papier", "toiletpapier", "keukenrol", "afwasmiddel",
         "wasmiddel", "tandpasta", "shampoo", "olie", "olijfolie", "azijn", "ketchup",
-        "mayonaise", "mosterd", "pindakaas", "hagelslag", "jam", "honing", "suiker", "meel",
+        "mayonaise", "mayo", "mosterd", "pindakaas", "hagelslag", "jam", "honing", "suiker", "meel",
         "bloem", "blik", "diepvries", "pizza", "friet", "patat",
     ]),
 ]

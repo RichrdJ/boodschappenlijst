@@ -10,6 +10,7 @@ from datetime import timedelta
 from flask import Flask, jsonify, redirect, request, g, send_from_directory, session
 
 from categories import CATEGORIES, DEFAULT_CATEGORY, guess_category, normalize
+from recipe import RecipeError, ingredients_from_text, ingredients_from_url
 from spelling import correct
 
 DB_PATH = os.environ.get("DB_PATH", "boodschappen.db")
@@ -390,6 +391,44 @@ def delete_suggestion(name):
             conn.execute("DELETE FROM history WHERE name = ?", (r["name"],))
     conn.commit()
     return suggestions()
+
+
+# ---------- recept: ingrediënten van een receptpagina op de lijst ----------
+
+@app.post("/api/recipe")
+def recipe_preview():
+    """Leest de ingrediënten uit (van een link of geplakte tekst) en laat ze eerst zien, nog niet opslaan."""
+    data = request.json or {}
+    try:
+        if (data.get("text") or "").strip():
+            result = ingredients_from_text(data["text"])
+        else:
+            result = ingredients_from_url(data.get("url", ""))
+    except RecipeError as e:
+        return jsonify({"error": str(e)}), 422
+    # geen tikfoutcorrectie: receptsites spellen goed, en die maakt van "winterpenen" "winterpeenen"
+    for ing in result["ingredients"]:
+        ing["category"] = categorize(ing["name"])
+        ing["on_list"] = on_list(ing["name"])
+    return jsonify(result)
+
+
+@app.post("/api/recipe/add")
+def recipe_add():
+    """Gekozen ingrediënten op de lijst zetten; wat er al op staat wordt overgeslagen."""
+    names = [n.strip() for n in (request.json or {}).get("names", []) if isinstance(n, str) and n.strip()]
+    conn = db()
+    have = {normalize(r["name"]) for r in conn.execute("SELECT name FROM items WHERE checked = 0")}
+    added = 0
+    for name in names:
+        if normalize(name) in have:
+            continue
+        conn.execute("INSERT INTO items (name, category, created) VALUES (?, ?, ?)", (name, categorize(name), time.time()))
+        bump_history(name, +1)
+        have.add(normalize(name))
+        added += 1
+    conn.commit()
+    return jsonify({"items": all_items(), "added": added})
 
 
 @app.get("/api/version")

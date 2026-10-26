@@ -119,6 +119,32 @@ dialog p{margin:0 0 14px;color:var(--muted);font-size:15px}
 .row button{flex:1;padding:12px;border-radius:12px;border:0}
 .del{background:var(--danger-bg);color:var(--danger)}
 .cancel{background:var(--bg)}
+/* Recept */
+.rcp{flex:none;width:54px;border:2px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);display:grid;place-items:center}
+.rcp svg{width:24px;height:24px}
+#recipe{max-height:92vh;overflow-y:auto;padding-bottom:0}
+#recipe .row{position:sticky;bottom:0;background:var(--surface);margin:0 -16px;padding:12px 16px calc(16px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line)}
+#recipe textarea{width:100%;min-height:140px;margin-top:10px;font:inherit;padding:12px 14px;border-radius:12px;border:2px solid var(--line);background:var(--bg);color:var(--ink);resize:vertical}
+#recipe textarea:focus{outline:none;border-color:var(--route)}
+#recipe summary{cursor:pointer;color:var(--route);font-weight:700;font-size:15px;padding:6px 0}
+.rcp-err{color:var(--danger)!important;background:var(--danger-bg);border-radius:12px;padding:10px 14px;margin:12px 0 0!important}
+.rcp-err:empty{display:none}
+.rcp-paste{margin-top:10px}
+.rcp-title{font-size:17px;font-weight:700;margin:16px 0 4px;overflow-wrap:anywhere}
+.rcp-all{display:flex;justify-content:space-between;align-items:center;margin:0 0 6px;font-size:15px;color:var(--muted)}
+.rcp-all button{background:none;border:0;color:var(--route);font-weight:700;padding:6px 0}
+.ings{list-style:none;margin:0;padding:0;border:2px solid var(--line);border-radius:14px;overflow:hidden}
+.ings li{display:flex;align-items:center;gap:10px;padding:6px 10px;border-top:1px solid var(--line)}
+.ings li:first-child{border-top:0}
+.ings input[type=checkbox]{flex:none;width:22px;height:22px;margin:0;accent-color:var(--route)}
+.ings .dot{flex:none;width:10px;height:10px;border-radius:50%;background:var(--cat)}
+.ings .ing{flex:1;min-width:0}
+.ings .ing input{width:100%;padding:6px 8px;border-radius:8px;border-color:transparent;background:none}
+.ings .ing input:focus{border-color:var(--route);background:var(--bg)}
+.ings small{display:block;color:var(--muted);font-size:13px;padding:0 8px;overflow-wrap:anywhere}
+.ings li.off .ing input{color:var(--muted)}
+.go{background:var(--marker);color:#16212C;font-weight:700}
+.go:disabled{opacity:.5;cursor:default}
 .toast{position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));max-width:608px;margin:0 auto;z-index:10;
   display:flex;align-items:center;gap:12px;min-height:52px;padding:6px 6px 6px 16px;overflow:hidden;
   background:#16212C;color:#F3F5F7;border-radius:14px;font-size:16px;
@@ -164,6 +190,7 @@ dialog p{margin:0 0 14px;color:var(--muted);font-size:15px}
   <div class="sugs" id="sugs" role="listbox" aria-label="Eerder getypt"></div>
   <div class="bar">
     <input id="input" placeholder="Wat moet je halen?" aria-label="Product toevoegen" enterkeyhint="done">
+    <button type="button" class="rcp" id="rcpOpen" aria-label="Ingrediënten van een recept toevoegen" title="Recept toevoegen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></button>
     <button class="add" aria-label="Toevoegen">+</button>
   </div>
 </form>
@@ -179,6 +206,26 @@ dialog p{margin:0 0 14px;color:var(--muted);font-size:15px}
   <div class="row">
     <button class="del" id="del">Van lijst halen</button>
     <button class="cancel" id="cancel">Sluiten</button>
+  </div>
+</dialog>
+
+<dialog id="recipe" aria-labelledby="rcpH">
+  <h3 id="rcpH">Recept toevoegen</h3>
+  <p>Plak de link van een recept. Daarna kies je zelf wat er op je lijst komt.</p>
+  <form class="bar" id="rcpForm" style="margin:0">
+    <input id="rcpUrl" type="url" inputmode="url" placeholder="https://…" aria-label="Link naar recept" enterkeyhint="go">
+    <button class="btn" id="rcpGet">Ophalen</button>
+  </form>
+  <p class="rcp-err" id="rcpErr" role="alert"></p>
+  <details class="rcp-paste" id="rcpPaste">
+    <summary>Of plak de ingrediënten zelf</summary>
+    <textarea id="rcpText" placeholder="Eén ingrediënt per regel, bijv.&#10;400 g spaghetti&#10;1 ui, gesnipperd&#10;2 tenen knoflook" aria-label="Ingrediënten"></textarea>
+    <div class="addrow"><button class="btn" id="rcpParse" style="flex:1;padding:12px">Lees uit</button></div>
+  </details>
+  <div id="rcpResult"></div>
+  <div class="row">
+    <button class="go" id="rcpAdd" hidden></button>
+    <button class="cancel" id="rcpClose">Sluiten</button>
   </div>
 </dialog>
 
@@ -473,6 +520,7 @@ $("#form").addEventListener("submit", async e => {
   e.preventDefault();
   const name = hl >= 0 && shownSugs[hl] ? shownSugs[hl].name : $("#input").value.trim();
   if (!name) return;
+  if (hl < 0 && isUrl(name)) { $("#input").value = ""; renderSugs(); openRecipe(name); return; }
   $("#input").value = ""; hl = -1;
   await addItem(name); renderSugs();
 });
@@ -535,6 +583,83 @@ $("#main").addEventListener("keydown", e => {
   if (e.target.id === "newLearn") $("#newLearnBtn").click();
 });
 
+/* ---------- recept: ingrediënten van een link ---------- */
+let rcp = null;
+// een link als product getypt of geplakt (ook "Bekijk dit recept: https://…" uit een deel-menu)
+const isUrl = s => /^(https?:\/\/|www\.)\S+$/i.test(s.trim()) || /https?:\/\/\S+/i.test(s) && s.trim().split(/\s+/).length > 2;
+function openRecipe(url = "") {
+  rcp = null; $("#rcpUrl").value = url; $("#rcpText").value = ""; $("#rcpErr").textContent = "";
+  $("#rcpPaste").open = false; renderRecipe();
+  if (!$("#recipe").open) $("#recipe").showModal();
+  if (url) fetchRecipe({ url }); else $("#rcpUrl").focus();
+}
+async function fetchRecipe(body) {
+  const busy = body.url ? $("#rcpGet") : $("#rcpParse"), label = busy.textContent;
+  busy.disabled = true; busy.textContent = body.url ? "Ophalen…" : "Bezig…"; $("#rcpErr").textContent = "";
+  try {
+    // niet via api(): een melding moet in het venster staan, de toast valt erachter
+    const res = await fetch("/api/recipe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 401 && data.login) return location.replace("/login");
+    if (!res.ok) {
+      $("#rcpErr").textContent = data.error || "Ophalen lukte niet. Probeer het opnieuw.";
+      if (body.url) $("#rcpPaste").open = true;
+      return;
+    }
+    if (!data.ingredients.length) { $("#rcpErr").textContent = "Geen ingrediënten gevonden."; return; }
+    // wat je meestal al in huis hebt of al op de lijst staat: tonen, maar niet aangevinkt
+    data.ingredients.forEach(i => i.pick = !i.pantry && !i.on_list);
+    rcp = data; $("#rcpPaste").open = false; renderRecipe();
+  } catch (e) {
+    $("#rcpErr").textContent = "Geen verbinding. Probeer het opnieuw.";
+  } finally { busy.disabled = false; busy.textContent = label; }
+}
+function updateRecipeButton() {
+  const n = rcp.ingredients.filter(i => i.pick && i.name.trim()).length, add = $("#rcpAdd");
+  add.hidden = false; add.disabled = !n;
+  add.textContent = n ? `Zet ${n} op de lijst` : "Niets gekozen";
+}
+function renderRecipe() {
+  if (!rcp) { $("#rcpResult").innerHTML = ""; $("#rcpAdd").hidden = true; return; }
+  const all = rcp.ingredients.every(i => i.pick);
+  $("#rcpResult").innerHTML = `<div class="rcp-title">${esc(rcp.title || "Ingrediënten")}</div>
+    <div class="rcp-all"><span>${rcp.ingredients.length} ingrediënten</span><button type="button" id="rcpToggle">${all ? "Niets kiezen" : "Alles kiezen"}</button></div>
+    <ul class="ings">${rcp.ingredients.map((i, k) => `<li class="${i.pick ? "" : "off"}" style="--cat:${catOf(i.category).color}">
+      <input type="checkbox" data-ipick="${k}" ${i.pick ? "checked" : ""} aria-label="${esc(i.name)} op de lijst zetten">
+      <span class="dot" aria-hidden="true"></span>
+      <span class="ing"><input value="${esc(i.name)}" data-iname="${k}" aria-label="Productnaam">
+        <small>${esc(i.line)}${i.on_list ? " · staat al op je lijst" : i.pantry ? " · heb je meestal al" : ""}</small></span></li>`).join("")}</ul>`;
+  updateRecipeButton();
+}
+$("#rcpOpen").onclick = () => openRecipe();
+$("#rcpForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const url = $("#rcpUrl").value.trim(); if (url) fetchRecipe({ url }); else $("#rcpUrl").focus();
+});
+$("#rcpParse").onclick = () => { const text = $("#rcpText").value; if (text.trim()) fetchRecipe({ text }); else $("#rcpText").focus(); };
+$("#rcpClose").onclick = () => $("#recipe").close();
+$("#rcpResult").addEventListener("change", e => {
+  const k = e.target.dataset.ipick;
+  if (k !== undefined) { rcp.ingredients[+k].pick = e.target.checked; renderRecipe(); }
+});
+$("#rcpResult").addEventListener("input", e => {
+  const k = e.target.dataset.iname;
+  if (k !== undefined) { rcp.ingredients[+k].name = e.target.value; updateRecipeButton(); }
+});
+$("#rcpResult").addEventListener("click", e => {
+  if (e.target.id !== "rcpToggle") return;
+  const all = rcp.ingredients.every(i => i.pick);
+  rcp.ingredients.forEach(i => i.pick = !all); renderRecipe();
+});
+$("#rcpAdd").onclick = async () => {
+  const names = rcp.ingredients.filter(i => i.pick && i.name.trim()).map(i => i.name.trim());
+  const r = await api("/api/recipe/add", { method: "POST", body: JSON.stringify({ names }) });
+  items = r.items; $("#recipe").close();
+  if (view !== "list") await setView("list"); else render();
+  loadSuggestions();
+  toast(r.added ? `${r.added} ${r.added === 1 ? "product" : "producten"} op je lijst gezet` : "Alles stond al op je lijst");
+};
+
 /* ---------- sheet ---------- */
 function openSheet() {
   $("#sheetTitle").textContent = current.name;
@@ -565,7 +690,7 @@ document.addEventListener("click", async e => {
 (async () => {
   await load(); loadSuggestions();
   api("/api/version").then(v => { appVersion = v.version; appAuth = !!v.auth; }).catch(() => {});
-  setInterval(() => { if (!document.hidden && !$("#sheet").open && view === "list") load(); }, 4000);
+  setInterval(() => { if (!document.hidden && !$("#sheet").open && !$("#recipe").open && view === "list") load(); }, 4000);
   document.addEventListener("visibilitychange", () => { if (!document.hidden && view === "list") load(); });
 })();
 </script>

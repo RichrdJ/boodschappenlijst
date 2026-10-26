@@ -35,6 +35,7 @@ Open daarna http://<ip-van-je-server>:2020 op je telefoon en kies "Zet op begins
 - **Productherkenning**: tikfouten worden verbeterd ("komkomer" wordt komkommer, "advokado" wordt avocado) en daarna in de juiste categorie gezet. Klopt de verbetering niet, tik dan op "Toch …" in de melding: de naam blijft zoals je hem typte en dat woord wordt voortaan niet meer verbeterd. Herkend worden ruim 1.400 gangbare supermarktproducten (`categories.py` en `products.py`) plus alles wat je zelf een categorie hebt gegeven.
 - Tik op een product om af te vinken. Het verdwijnt van je lijst (even "Ongedaan maken" kan) en komt in de Historie.
 - **Historie**: alles wat je hebt afgevinkt, per dag. Zet losse producten of een hele dag in één keer weer op je lijst.
+- **Recept toevoegen**: tik op het 🔗-knopje naast het invoerveld en plak de link van een recept (of plak de link gewoon in het invoerveld). De ingrediënten worden uitgelezen, zonder hoeveelheden ("2 tenen knoflook, geperst" wordt knoflook). Je ziet ze eerst en kiest zelf wat op de lijst komt; zout, peper en water en wat al op je lijst staat, staan standaard uit. Werkt met de meeste receptsites (Leukerecepten, 24Kitchen, Jumbo, foodblogs). Sommige sites, zoals Allerhande, laten zich niet automatisch uitlezen: kopieer dan de ingrediënten van de pagina en plak ze in het venster.
 - Staat iets verkeerd? Tik op ⋯ en kies de juiste categorie. Dat wordt onthouden.
 - Meerdere telefoons blijven vanzelf in sync.
 
